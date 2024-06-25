@@ -197,6 +197,8 @@ When no closures are created, the lexical environment of a function is typically
 https://medium.com/deno-the-complete-reference/10-use-cases-of-closures-in-javascript-98fe0eab36db
 
 
+<br>
+
 # 'this' Binding
 
 The value of this depends on how a function is called and not necessarily where it is defined.
@@ -246,4 +248,53 @@ const obj = {
 obj.myMethod();
 ```
 
+<br>
+
+# Hoisting
+
+JavaScript Hoisting refers to the process whereby the interpreter “appears” to move the declaration of functions, variables, classes, or imports to the top of their scope, prior to execution of the code.
+This makes functions and variables accessible before their actual declarations in the code.
+NOTE:  The code is not physically moved to the top of the scope.
+
+
+## Function Declarations vs. Function Expressions
+It's important to differentiate between function declarations and function expressions, as they behave differently in terms of hoisting.
+
+### Function Declarations
+A function declaration defines a named function and the entire definition is hoisted to the top of its scope.
+```
+console.log(myFunction()); // "Hello from myFunction!"
+
+function myFunction() {
+  return 'Hello from myFunction!';
+}
+```
+
+### Function Expressions
+Function expressions, including those defined using the function keyword and arrow functions, are not hoisted in the same way as function declarations. Only the variable declaration is hoisted, not the function definition.
+Example with a function expression:
+```
+console.log(myFunction); // undefined
+console.log(myFunction()); // TypeError: myFunction is not a function
+
+var myFunction = function() {
+  return 'Hello from myFunction!';
+};
+```
+
+### Example with Arrow Functions
+Arrow functions, which are also function expressions, behave the same way as regular function expressions in terms of hoisting.
+Example with an arrow function:
+
+```
+console.log(myArrowFunction); // undefined
+console.log(myArrowFunction()); // TypeError: myArrowFunction is not a function
+
+var myArrowFunction = () => 'Hello from myArrowFunction!';
+```
+
+### Reason for Hoisting
+During the Creation phase(Memory Allocation Phase) of execution context, we know that memory for variables and functions is reserved. And only in the execution phase, the actual code is executed. During the creation phase of the execution context, the memory for variables has been reserved and the identifier binding happens and the variable is initialized with the value undefined (for var) or uninitialized (for let and const). Now, in execution phase, when we try to access those variables even before the declaration then we can do so, as the variable exists in the memory, however, we get the value as undefined or uninitialized (for variables).
+
+In the case of functions, the entire function code is stored for the function name during the creation phase, that’s why it works as intended. 
 
