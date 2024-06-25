@@ -232,5 +232,18 @@ const instance = new MyConstructor();
 console.log(instance.value); // Logs 42
 ```
 
+**Arrow Functions**: Arrow functions do not have their own 'this' binding. Instead, they inherit 'this' from the surrounding lexical context (the scope in which they were defined).
+```
+const obj = {
+    value: 42,
+    myMethod: function() {
+        const arrowFunction = () => {
+            console.log(this); // Logs the `obj` object
+        };
+        arrowFunction();
+    }
+};
+obj.myMethod();
+```
 
 
