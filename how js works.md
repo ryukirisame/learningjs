@@ -94,6 +94,78 @@ The association between a name of a variable to its value is called binding.
 ``` let x = 10;  ```
 The identifier is x, and it has binding to the value 10.
 
+## Lexical Environment Structure
+A lexical environment has 2 parts:
+1.	Environment Record
+2.	Reference to the our environment
+
+### Environment Record
+The precise definition is that an environment record holds the identifier bindings which were created in the scope of the lexical environment. So basically, it holds the function’s local variables, arguments, and inner function declarations.
+
+There are 2 types of Environment Records:
+1.	Declarative Environment Record - Its job is to host declarations of variables, functions and arguments that are inside the scope of functions. (before ES5, we had activation object, the declarative environment variable replaces the activation object. The primary motivation to do that was actually performance)
+2.	Object Environment Record - Its job is to store declarations of variables and functions that are in the global scope.
+
+Let’s take the following code example:
+```
+var x = 10;  
+function foo(a) {  
+var y = 20;  
+}  
+foo('hello');  
+```
+
+Here we have two environments, one is the global one and the other one is a function one (‘foo’). So how would that be represented theoretically behind the scenes?
+
+```
+// environment of the global context  
+globalEnvironment = {  
+environmentRecord: {  
+// type  
+type: "ObjectEnvironmentRecord",  
+// built-ins:  
+Object: function,  
+Array: function,  
+// etc ...  
+  
+// our bindings:  
+x: 10  
+foo: <function ref>  
+},  
+outer: null // no parent environment  
+};  
+  
+// environment of the "foo" function  
+fooEnvironment = {  
+environmentRecord: {  
+// type  
+type: "DeclarativeEnvironmentRecord",  
+// our bindings:  
+y: 20,  
+arguments: {0: 'hello', length: 1},  
+},  
+outer: globalEnvironment  
+};  
+```
+
+Keep in mind that:
+1.	Inside the environment record of the global environment we have all the prototype functions of Object, Array, and other built-in functions.
+2.	The environment record of type declarative environment (which is created when calling a function) contains something called an arguments object. The arguments object is an object that contains the values that are passed into the function and their index. It also contains a property length which represents the number of arguments that were passed.
+
+### Reference To Outer Environment
+
+Each lexical environment holds a reference to its outer environment. In the example above we can see that the function foo has a ref to the global function.
+
+The global environment itself has no ref as it has no environment as its parent, it’s the root environment.
+When JS looks for a variable, if it’s not found in the current context it goes to the outer environment, and this process repeats itself till the value is found or till it gets to the global object which its reference to our environment equals to null since it has no environment above it.
+
+
+
+
+
+
+
+
 
 
 
