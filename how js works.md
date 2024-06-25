@@ -160,6 +160,18 @@ The global environment itself has no ref as it has no environment as its parent,
 When JS looks for a variable, if it’s not found in the current context it goes to the outer environment, and this process repeats itself till the value is found or till it gets to the global object which its reference to our environment equals to null since it has no environment above it.
 
 
+## Block Lexical Environment
+JavaScript ES6 introduced block-scoping, which means variables declared with let and const are block-scoped. A block lexical environment is created whenever you enter a block of code that uses these block-scoped variables. This includes blocks like those in loops, if statements, and so on.
+
+### Execution Context and Call Stack
+The execution context includes both the lexical environment and the this binding, and it is pushed to the call stack when a function is called. A new execution context is not pushed to the call stack for every block {} or control structure like if. Instead, a new lexical environment is created within the existing execution context for block-scoped variables.
+
+### Where is the Block Lexical Environment Created?
+When a block is encountered during code execution, and it contains let, const, or class declarations, a new block lexical environment is created. This environment exists within the current execution context and contains only the block-scoped variables.
+
+
+
+
 # Closures
 In JavaScript, a closure is a powerful feature that allows a function to access variables from an outer function's scope, even after the outer function has returned. Closures are created whenever a function is defined inside another function, giving the inner function access to the outer function's variables.
 
@@ -189,6 +201,9 @@ The lexical environment of outerFunction is preserved because innerFunction main
 
 ### Closures and Memory Management
 When an inner function (closure) retains a reference to variables in its outer function, it effectively keeps the outer function's lexical environment in memory. This is because the closure forms a link to the lexical environment, ensuring that it is not garbage collected even after the outer function has completed execution. The captured lexical environment is preserved in the heap because the inner function maintains a reference to it.
+
+**Q. Only the lexical environment part of the execution context of the outer function is preserved? or the entire execution context of the outer function is preserved?**
+In JavaScript, when a closure is created, only the lexical environment (specifically, the variables and their bindings) of the outer function is preserved, not the entire execution context.
 
 ### Without Closures
 When no closures are created, the lexical environment of a function is typically destroyed after the function execution is complete.
@@ -297,4 +312,10 @@ var myArrowFunction = () => 'Hello from myArrowFunction!';
 During the Creation phase(Memory Allocation Phase) of execution context, we know that memory for variables and functions is reserved. And only in the execution phase, the actual code is executed. During the creation phase of the execution context, the memory for variables has been reserved and the identifier binding happens and the variable is initialized with the value undefined (for var) or uninitialized (for let and const). Now, in execution phase, when we try to access those variables even before the declaration then we can do so, as the variable exists in the memory, however, we get the value as undefined or uninitialized (for variables).
 
 In the case of functions, the entire function code is stored for the function name during the creation phase, that’s why it works as intended. 
+
+
+
+
+
+
 
