@@ -160,8 +160,41 @@ The global environment itself has no ref as it has no environment as its parent,
 When JS looks for a variable, if it’s not found in the current context it goes to the outer environment, and this process repeats itself till the value is found or till it gets to the global object which its reference to our environment equals to null since it has no environment above it.
 
 
+# Closures
+In JavaScript, a closure is a powerful feature that allows a function to access variables from an outer function's scope, even after the outer function has returned. Closures are created whenever a function is defined inside another function, giving the inner function access to the outer function's variables.
+
+In JavaScript, the lexical environment of a function is generally destroyed once the function has finished executing, except when there are closures involved. When a function creates a closure, it means that some inner function retains a reference to variables defined in the outer function. This prevents the lexical environment from being garbage-collected, because it’s still in use.
+
+```
+function outerFunction() {
+    var outerVar = 'I am outer';
+
+    function innerFunction() {
+        console.log(outerVar); // Accesses outerVar from outerFunction
+    }
+
+    return innerFunction;
+}
+
+const inner = outerFunction();
+inner(); // Outputs: 'I am outer'
+```
+In this example:
+1.	outerFunction creates a variable outerVar and defines innerFunction, which accesses outerVar.
+2.	outerFunction returns innerFunction, creating a closure.
+3.	When inner (the returned innerFunction) is called, it still has access to outerVar, even though outerFunction has completed execution.
+
+The lexical environment of outerFunction is preserved because innerFunction maintains a reference to it. This behavior ensures that all variables defined in outerFunction remain accessible to innerFunction.
 
 
+### Closures and Memory Management
+When an inner function (closure) retains a reference to variables in its outer function, it effectively keeps the outer function's lexical environment in memory. This is because the closure forms a link to the lexical environment, ensuring that it is not garbage collected even after the outer function has completed execution. The captured lexical environment is preserved in the heap because the inner function maintains a reference to it.
+
+### Without Closures
+When no closures are created, the lexical environment of a function is typically destroyed after the function execution is complete.
+
+### Use Case of Closures
+https://medium.com/deno-the-complete-reference/10-use-cases-of-closures-in-javascript-98fe0eab36db
 
 
 
