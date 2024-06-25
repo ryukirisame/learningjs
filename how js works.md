@@ -197,8 +197,40 @@ When no closures are created, the lexical environment of a function is typically
 https://medium.com/deno-the-complete-reference/10-use-cases-of-closures-in-javascript-98fe0eab36db
 
 
+# 'this' Binding
 
+The value of this depends on how a function is called and not necessarily where it is defined.
 
+In JavaScript, the value of this is determined by the execution context in which a function is called. Here are the primary rules for determining this binding:
+1.	Global Context: When a function is called in the global context, this refers to the global object (which is window in browsers and global in Node.js).
+```
+console.log(this); // In a browser, this logs the `window` object
+```
+2.	Function Context: When a regular function is called, this refers to the global object in non-strict mode and undefined in strict mode.
+```
+function myFunction() {
+    console.log(this);
+}
+myFunction(); // In non-strict mode, logs `window`. In strict mode, logs `undefined`.
+```
+3.	Method Context: When a function is called as a method of an object, this refers to the object that the method is called on.
+```
+const obj = {
+    value: 42,
+    myMethod: function() {
+        console.log(this.value);
+    }
+};
+obj.myMethod(); // Logs 42
+```
+4.	Constructor Context: When a function is used as a constructor (with the new keyword), this refers to the newly created object.
+```
+function MyConstructor() {
+    this.value = 42;
+}
+const instance = new MyConstructor();
+console.log(instance.value); // Logs 42
+```
 
 
 
