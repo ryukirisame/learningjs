@@ -73,8 +73,41 @@ arrowFunction(1, 2, 3); // [1, 2, 3]
 ```
 
 
+## Constructor
+**Traditional Function:**
+Can be used as a constructor function and can be invoked with the new keyword to create instances.
+```
+function TraditionalFunction(name) {
+  this.name = name;
+}
+
+const instance = new TraditionalFunction('John');
+console.log(instance.name); // John
+```
+
+**Arrow Function:**
+Cannot be used as a constructor function and will throw an error if used with new.
+
+```
+const ArrowFunction = (name) => {
+  this.name = name;
+};
+
+// const instance = new ArrowFunction('John'); // TypeError: ArrowFunction is not a constructor
+```
 
 
+## Implicit Return
 
-
-
+**Traditional Function:**
+Requires an explicit return statement to return a value.
+```
+function traditionalFunction(a, b) {
+  return a + b;
+}
+```
+**Arrow Function:**
+Can have an implicit return for single-expression functions, where the expression's value is returned automatically.
+```
+const arrowFunction = (a, b) => a + b;
+```
