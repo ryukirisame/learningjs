@@ -250,7 +250,7 @@ function x() {
 }
 x();
 ```
-**Explanation**
+**Explanation**:
 When using let inside the for loop, a new binding of i is created for each iteration, so the setTimeout callbacks will correctly log 1, 2, 3, 4, and 5 at one-second intervals.
 
 **NOTE**: When using let in a for loop, JavaScript creates a new binding for the loop variable i for each iteration of the loop. This is different from using var, which reuses the same variable for each iteration.
