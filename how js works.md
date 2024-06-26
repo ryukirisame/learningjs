@@ -354,5 +354,6 @@ In the example above, the variable a is in the TDZ from the start of the block u
    Reference Error ... while trying to access variable which is not there in global memory.
 9. Syntax error is similar to compile error, while TypeError and Reference Error falls under run time error.
 
-
+# Implicit Global Variables
+When you assign a value to an identifier that has not been declared using var, let, or const, JavaScript treats it as an implicit global variable. This means the variable is automatically added as a property of the global object (window in browsers and global in Node.js).
 
