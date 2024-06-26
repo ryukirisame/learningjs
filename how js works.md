@@ -214,6 +214,64 @@ https://medium.com/deno-the-complete-reference/10-use-cases-of-closures-in-javas
 
 <br>
 
+### SetTimeout & Closures
+
+**Problem Statement**: I want to write a code that prints 1,2,3,4,5 with 1 second interval. We are not supposed to use setInterval, but use setTimeout.
+
+Let's try a solution:
+```
+(function x()
+{
+    for(var i=1;i<6;i++)
+    {    
+        setTimeout(()=> console.log(i), i*1000);
+    }
+})();
+```
+
+In this solution, we are setting up 5 setTimeout in a loop. 
+However, the output will be:
+```
+6 <br>
+6 <br>
+6 <br>
+6 <br>
+6 <br>
+```
+
+This solution didn't work. The issue with our code lies in the scoping of the variable i when using var. Since var is function-scoped, the same i variable is shared across all iterations of the loop. By the time the setTimeout callbacks are executed, the loop has already completed and i is equal to 6 for all the callbacks, resulting in the output 6 being printed five times.
+
+To fix this, you can use let instead of var to take advantage of block scoping. This ensures that each iteration of the loop has its own i variable with the correct value. Here’s the corrected code:
+```
+function x() {
+  for (let i = 1; i < 6; i++) {
+    setTimeout(() => console.log(i), i * 1000);
+  }
+}
+x();
+```
+**Explanation**
+When using let inside the for loop, a new binding of i is created for each iteration, so the setTimeout callbacks will correctly log 1, 2, 3, 4, and 5 at one-second intervals.
+
+**NOTE**: When using let in a for loop, JavaScript creates a new binding for the loop variable i for each iteration of the loop. This is different from using var, which reuses the same variable for each iteration.
+
+**Alternative Solution with Closures**
+Another way to solve this problem is by using closures to capture the value of i:
+
+```
+function x() {
+  for (var i = 1; i < 6; i++) {
+    (function(i) {
+      setTimeout(() => console.log(i), i * 1000);
+    })(i);
+  }
+}
+x();
+```
+In this alternative solution:
+- An immediately invoked function expression (IIFE) creates a new scope for each iteration.
+- The current value of i is passed to the IIFE, which preserves the correct value of i for each setTimeout callback.
+
 # 'this' Binding
 
 The value of this depends on how a function is called and not necessarily where it is defined.
