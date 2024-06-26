@@ -232,11 +232,11 @@ Let's try a solution:
 In this solution, we are setting up 5 setTimeout in a loop. 
 However, the output will be:
 ```
-6 <br>
-6 <br>
-6 <br>
-6 <br>
-6 <br>
+6 
+6 
+6 
+6 
+6 
 ```
 
 This solution didn't work. The issue with our code lies in the scoping of the variable i when using var. Since var is function-scoped, the same i variable is shared across all iterations of the loop. By the time the setTimeout callbacks are executed, the loop has already completed and i is equal to 6 for all the callbacks, resulting in the output 6 being printed five times.
@@ -255,7 +255,8 @@ When using let inside the for loop, a new binding of i is created for each itera
 
 **NOTE**: When using let in a for loop, JavaScript creates a new binding for the loop variable i for each iteration of the loop. This is different from using var, which reuses the same variable for each iteration.
 
-**Alternative Solution with Closures**
+**Alternative Solution with Closures** 
+
 Another way to solve this problem is by using closures to capture the value of i:
 
 ```
