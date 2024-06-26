@@ -271,7 +271,6 @@ JavaScript Hoisting refers to the process whereby the interpreter “appears” 
 This makes functions and variables accessible before their actual declarations in the code.
 NOTE:  The code is not physically moved to the top of the scope.
 
-
 ## Function Declarations vs. Function Expressions
 It's important to differentiate between function declarations and function expressions, as they behave differently in terms of hoisting.
 
@@ -313,6 +312,15 @@ During the Creation phase(Memory Allocation Phase) of execution context, we know
 
 In the case of functions, the entire function code is stored for the function name during the creation phase, that’s why it works as intended. 
 
+## var in Block Statements
+When you declare a variable using var inside a block statement (like an if statement, loop, or any {} block), it is not confined to that block. Instead, it is hoisted to the top of the nearest function or global scope. This leads to the variable being accessible outside the block where it was defined.
+
+```
+if (true) {
+  var x = 10;
+}
+console.log(x); // Outputs: 10
+```
 
 ## Temporal Dead Zone
 
@@ -345,4 +353,6 @@ In the example above, the variable a is in the TDZ from the start of the block u
    Type Error ...  while trying to re-initialize const variable <br>
    Reference Error ... while trying to access variable which is not there in global memory.
 9. Syntax error is similar to compile error, while TypeError and Reference Error falls under run time error.
+
+
 
