@@ -341,8 +341,8 @@ In the example above, the variable a is in the TDZ from the start of the block u
 5. const variable declaration and initialisation must be done on the same line.
 6. Use const wherever possible followed by let, Use var as little as possible(only if you have to). It helps avoid error.
 7. Initialising variables at the top is good idea, helps shrinks TDZ to zero.
-8. Syntax Error ... violation of JS syntax
-   Type Error ...  while trying to re-initialize const variable
+8. Syntax Error ... violation of JS syntax <br>
+   Type Error ...  while trying to re-initialize const variable <br>
    Reference Error ... while trying to access variable which is not there in global memory.
 9. Syntax error is similar to compile error, while TypeError and Reference Error falls under run time error.
 
