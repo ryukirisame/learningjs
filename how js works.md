@@ -314,8 +314,35 @@ During the Creation phase(Memory Allocation Phase) of execution context, we know
 In the case of functions, the entire function code is stored for the function name during the creation phase, that’s why it works as intended. 
 
 
+## Temporal Dead Zone
 
+The Temporal Dead Zone (TDZ) is a behavior in JavaScript that affects variables declared with let and const. The TDZ refers to the period of time during which these variables exist in the scope but cannot be accessed before they are declared. This period starts from the beginning of the block in which the variable is defined and ends when the variable declaration is encountered and initialized.
 
+### Understanding Temporal Dead Zone
+**Declaration and Initialization**: When JavaScript code is parsed, variables declared with let and const are hoisted to the top of their block scope. However, unlike var, they are not initialized with undefined. Instead, they remain uninitialized until the actual declaration statement is executed.
 
+**Accessing in TDZ**: Attempting to access a let or const variable before its declaration results in a ReferenceError. This is because the variable is in the TDZ and cannot be used.
 
+**End of TDZ**: The TDZ ends when the variable is initialized, i.e., when the execution reaches the line where the variable is declared and assigned a value.
+
+```
+console.log(a); // ReferenceError: Cannot access 'a' before initialization
+let a = 3;
+console.log(a); // 3
+```
+In the example above, the variable a is in the TDZ from the start of the block until the declaration let a = 3; is executed. Accessing a before its declaration results in a ReferenceError.
+
+### Important Points
+
+1. let and const are hoisted but its memory is allocated at other place than window which cannot be accessed before initialisation.
+2. Temporal Dead Zone exists until variable is declared and assigned a value.
+3. window.variable OR this.variable will not give value of variable defined using let or const.
+4. We cannot redeclare the same variable with let/const(even with using var the second time). But in case of var, we can declare the same variable twice.
+5. const variable declaration and initialisation must be done on the same line.
+6. Use const wherever possible followed by let, Use var as little as possible(only if you have to). It helps avoid error.
+7. Initialising variables at the top is good idea, helps shrinks TDZ to zero.
+8. Syntax Error ... violation of JS syntax
+   Type Error ...  while trying to re-initialize const variable
+   Reference Error ... while trying to access variable which is not there in global memory.
+9. Syntax error is similar to compile error, while TypeError and Reference Error falls under run time error.
 
