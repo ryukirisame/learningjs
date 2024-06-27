@@ -31,7 +31,7 @@ const myFunction = function add(a, b) {
 
 - In this example, add is a named function expression. The function name add is only available within the scope of the function itself, not outside of it. Hence, add is not accessible in the surrounding scope, which is why calling add(2, 3) outside of the function expression throws a ReferenceError.
 
-- **Why Use Named Function Expressions?**
+**Why Use Named Function Expressions?**
 Using named function expressions can be helpful for debugging and recursion within the function itself:
 
 _Debugging_: When debugging, the function name add will appear in stack traces, making it easier to identify the function.
