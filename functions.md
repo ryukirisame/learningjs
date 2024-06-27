@@ -83,6 +83,7 @@ IIFEs are functions that are defined and immediately executed. They are useful f
 })();
 ```
 
-### Named Function Expressions
-Named function expressions can be useful for recursion or for better debugging.
+# First Class Functions
+
+In JavaScript, functions are considered first-class citizens, meaning they are treated like any other variable. This allows functions to be assigned to variables, passed as arguments to other functions, returned from functions, and stored in data structures.
 
