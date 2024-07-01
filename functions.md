@@ -87,3 +87,70 @@ IIFEs are functions that are defined and immediately executed. They are useful f
 
 In JavaScript, functions are considered first-class citizens, meaning they are treated like any other variable. This allows functions to be assigned to variables, passed as arguments to other functions, returned from functions, and stored in data structures.
 
+
+# Callback Functions
+
+A callback function is simply a function that is passed to another function as a parameter and then invoked (called back) at a certain point within the receiving function.
+
+- Callbacks are often used for handling asynchronous operations, such as reading files, making network requests, or setting timers.
+
+
+**Simulating Asynchronous operation**
+
+```
+function fetchData(callback) {
+  // Simulate an asynchronous operation using setTimeout
+  setTimeout(() => {
+    const data = { name: 'Alice', age: 25 };
+    callback(null, data);
+  }, 2000);
+}
+
+fetchData(function(error, data) {
+  if (error) {
+    console.error('Error:', error);
+  } else {
+    console.log('Data received:', data);
+  }
+});
+```
+
+## Write a js program that counts the number of times a button is clicked without using any global variable.
+
+To count the number of times a button is clicked without using any global variables, you can use closures to encapsulate the click count.
+
+```
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Button Click Counter</title>
+</head>
+<body>
+    <button id="clickMe">Click me</button>
+    <p id="count">Count: 0</p>
+
+    <script>
+        // Immediately Invoked Function Expression (IIFE) to create a local scope
+        (function() {
+            // Get the button and count elements
+            const button = document.getElementById('clickMe');
+            const countDisplay = document.getElementById('count');
+
+            // Initialize the count within the closure
+            let count = 0;
+
+            // Add an event listener to the button
+            button.addEventListener('click', function() {
+                // Increment the count
+                count++;
+                // Update the count display
+                countDisplay.textContent = 'Count: ' + count;
+            });
+        })();
+    </script>
+</body>
+</html>
+```
+
+
+
