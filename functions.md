@@ -109,6 +109,39 @@ const doubledNumbers = myMap(numbers, function(num) {
 console.log(doubledNumbers); // [2, 4, 6, 8, 10]
 ```
 
+## Problem: Find first name of all user whose age is less than 25
+
+**Using filter and reduce**
+```
+const users=[
+    {firstName: "Siddharth", lastName: "Kumar", age: 27},
+    {firstName: "Sweta", lastName: "Kumari", age: 24},
+    {firstName: "Tanjiro", lastName: "Kamado", age: 20},
+    {firstName: "Itachi", lastName: "Uchiha", age: 32},
+    ];
+  
+const output= users.filter(user=> user.age < 25).map(user=> user.firstName);  
+console.log(output)
+```
+
+**Using reduce only**
+```
+const users=[
+    {firstName: "Siddharth", lastName: "Kumar", age: 27},
+    {firstName: "Sweta", lastName: "Kumari", age: 24},
+    {firstName: "Tanjiro", lastName: "Kamado", age: 20},
+    {firstName: "Itachi", lastName: "Uchiha", age: 32},
+    ];
+    
+const output= users.reduce((acc, curr)=>{
+    if(curr.age < 25)
+        acc.push(curr.firstName)
+    return acc;
+}, [])
+
+console.log(output)
+```
+
 
 # Callback Functions
 
