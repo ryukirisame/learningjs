@@ -109,6 +109,20 @@ const doubledNumbers = myMap(numbers, function(num) {
 console.log(doubledNumbers); // [2, 4, 6, 8, 10]
 ```
 
+## Our own implementation of filter function
+```
+var filter = function(arr, fn) {
+    
+    const output=[];
+    for(let i=0;i<arr.length;i++)
+    {
+        if(fn(arr[i], i))
+            output.push(arr[i])
+    }
+    return output;
+};
+```
+
 ## Problem: Find first name of all user whose age is less than 25
 
 **Using filter and reduce**
