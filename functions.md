@@ -123,6 +123,20 @@ var filter = function(arr, fn) {
 };
 ```
 
+## Our own implementation of reduce function
+```
+var reduce = function(nums, fn, init) {
+    
+    let acc=init;
+    for(let i=0;i<nums.length;i++)
+    {
+        acc=fn(acc, nums[i])
+    }
+
+    return acc;
+};
+```
+
 ## Problem: Find first name of all user whose age is less than 25
 
 **Using filter and reduce**
