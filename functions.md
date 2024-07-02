@@ -87,6 +87,28 @@ IIFEs are functions that are defined and immediately executed. They are useful f
 
 In JavaScript, functions are considered first-class citizens, meaning they are treated like any other variable. This allows functions to be assigned to variables, passed as arguments to other functions, returned from functions, and stored in data structures.
 
+## Higher Order Functions
+In JavaScript, a higher-order function is a function that either takes one or more functions as arguments, returns a function, or both.
+
+## Our own implementation of map function
+
+```
+function myMap(array, callback) {
+  const resultArray = [];
+  for (let i = 0; i < array.length; i++) {
+    resultArray.push(callback(array[i], i, array));
+  }
+  return resultArray;
+}
+
+const numbers = [1, 2, 3, 4, 5];
+const doubledNumbers = myMap(numbers, function(num) {
+  return num * 2;
+});
+
+console.log(doubledNumbers); // [2, 4, 6, 8, 10]
+```
+
 
 # Callback Functions
 
