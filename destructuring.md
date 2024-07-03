@@ -86,6 +86,83 @@ console.log(rest); // { b: 2, c: 3 }
 # Nested Destructuring
 You can destructure nested arrays or objects.
 
+**Nested Array Destructuring**
+```
+const array = [1, [2, 3], 4];
+
+const [first, [second, third], fourth] = array;
+
+console.log(first);  // 1
+console.log(second); // 2
+console.log(third);  // 3
+console.log(fourth); // 4
+```
+
+**Nested Object Destructuring**
+```
+const obj = {
+  a: 1,
+  b: {
+    c: 2,
+    d: 3
+  }
+};
+
+const {
+  a,
+  b: { c, d }
+} = obj;
+
+console.log(a); // 1
+console.log(c); // 2
+console.log(d); // 3
+```
+
+# Function Parameters Destructuring
+You can destructure arrays or objects directly in function parameters.
+
+**Array Destructuring in Function Parameters**
+```
+function sum([a, b]) {
+  return a + b;
+}
+
+console.log(sum([1, 2])); // 3
+```
+
+**Object Destructuring in Function Parameters**
+```
+function greet({ name, age }) {
+  return `Hello, my name is ${name} and I am ${age} years old.`;
+}
+
+console.log(greet({ name: 'Alice', age: 30 }));
+// Hello, my name is Alice and I am 30 years old.
+```
+
+# Default Values
+You can set default values for variables when destructuring.
+
+**Default Values in Array Destructuring**
+```
+const array = [1];
+
+const [first, second = 2] = array;
+
+console.log(first);  // 1
+console.log(second); // 2
+```
+
+**Default Values in Object Destructuring**
+```
+const obj = { a: 1 };
+
+const { a, b = 2 } = obj;
+
+console.log(a); // 1
+console.log(b); // 2
+```
+
 
 
 
