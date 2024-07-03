@@ -30,6 +30,7 @@ console.log(sum(...numbers)); // 6
 # Rest Parameter
 When used in a function parameter context, the ... operator is called the rest parameter. It collects all remaining arguments into an array.
 
+Here, ...numbers collects all arguments passed to the sum function into an array called numbers.
 ```
 function sum(...numbers) {
   return numbers.reduce((acc, num) => acc + num, 0);
@@ -37,8 +38,8 @@ function sum(...numbers) {
 
 console.log(sum(1, 2, 3, 4)); // 10
 ```
-Here, ...numbers collects all arguments passed to the sum function into an array called numbers.
 
+**Combining Destructuring and Rest Parameters**
 ```
 const user = {
   id: 1,
