@@ -17,7 +17,7 @@ console.log(second); // 2
 console.log(third);  // 3
 ```
 
-**Skipping Elements**
+**Skipping Elements**:
 You can skip elements by leaving a blank space in the destructuring pattern.
 
 ```
@@ -29,7 +29,7 @@ console.log(first);  // 1
 console.log(third);  // 3
 ```
 
-**Using Rest Parameter**
+**Using Rest Parameter**:
 You can use the rest parameter to collect remaining elements into a new array.
 
 ```
@@ -58,7 +58,7 @@ console.log(b); // 2
 console.log(c); // 3
 ```
 
-**Renaming Variables**
+**Renaming Variables**:
 You can rename the variables while destructuring.
 
 ```
@@ -70,7 +70,7 @@ console.log(alpha); // 1
 console.log(beta);  // 2
 ```
 
-**Using Rest Parameter**
+**Using Rest Parameter**:
 You can use the rest parameter to collect remaining properties into a new object.
 
 ```
