@@ -43,6 +43,64 @@ thisArg: The value to use as this when calling the function. <br>
 argsArray: An array or array-like object containing arguments to pass to the function.
 
 
+### Example
+```
+function greet(greeting, punctuation) {
+  console.log(greeting + ', ' + this.name + punctuation);
+}
+
+const person = { name: 'Alice' };
+
+greet.apply(person, ['Hello', '!']); // Output: Hello, Alice!
+```
+
+In this example:
+
+'this' inside greet refers to person. <br>
+The arguments 'Hello' and '!' are passed as an array.
+
+# 'bind' Method
+The bind method creates a new function with a fixed 'this' value and some arguments already set.
+
+### Syntax
+```
+const boundFunction = function.bind(thisArg, arg1, arg2, ...)
+```
+
+thisArg: The value to use as this when calling the new function. <br>
+arg1, arg2, ...: Arguments to pre-fill for the new function.
+
+### Example
+```
+function greet(greeting, punctuation) {
+  console.log(greeting + ', ' + this.name + punctuation);
+}
+
+const person = { name: 'Alice' };
+
+const boundGreet = greet.bind(person, 'Hello');
+boundGreet('!'); // Output: Hello, Alice!
+```
+
+In this example:
+
+'this' inside greet refers to person. <br>
+The greeting argument is pre-filled with 'Hello', and the remaining arguments can be provided when boundGreet is called.
+
+
+# Differences Between call, apply, and bind
+### Invocation:
+- 'call' and 'apply' invoke the function immediately.
+- 'bind' returns a new function that can be called later.
+
+### Arguments:
+- 'call' takes arguments individually.
+- 'apply' takes arguments as an array.
+- 'bind' pre-fills arguments, allowing partial application.
+
+
+
+
 
 
 
