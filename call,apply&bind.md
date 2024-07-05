@@ -31,6 +31,22 @@ In this example:
 'this' inside greet refers to person. <br>
 The arguments 'Hello' and '!' are passed individually.
 
+
+**Using call for Method Borrowing**
+```
+const obj1 = {
+  name: 'Alice',
+  greet: function() {
+    console.log('Hello, ' + this.name);
+  }
+};
+
+const obj2 = { name: 'Bob' };
+
+obj1.greet.call(obj2); // Output: Hello, Bob
+```
+
+
 # apply Method
 The apply method is similar to 'call' method, but it takes an array of arguments instead of listing them individually.
 
@@ -87,6 +103,16 @@ In this example:
 'this' inside greet refers to person. <br>
 The greeting argument is pre-filled with 'Hello', and the remaining arguments can be provided when boundGreet is called.
 
+
+**Using bind for Partial Application**
+```
+function multiply(a, b) {
+  return a * b;
+}
+
+const double = multiply.bind(null, 2);
+console.log(double(5)); // Output: 10
+```
 
 # Differences Between call, apply, and bind
 ### Invocation:
