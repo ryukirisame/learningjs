@@ -125,10 +125,40 @@ console.log(double(5)); // Output: 10
 - 'bind' pre-fills arguments, allowing partial application.
 
 
+# Partial Application and Pre-Fill in JavaScript
+Partial application is a technique in functional programming where a function is applied to some of its arguments, producing a new function that expects the remaining arguments. This concept can be implemented in JavaScript using the bind method.
 
+### Pre-Fill in Context of bind
+When we talk about "pre-fill," we mean providing some of the arguments to a function in advance, so that when the resulting function is called later, it has some arguments already fixed (or pre-filled).
 
+### Example of Partial Application
 
+```
+function multiply(a, b, c) {
+  return a * b * c;
+}
 
+// Create a new function where `a` is pre-filled with 2 and `b` with 3
+const multiplyBySix = multiply.bind(null, 2, 3);
+
+console.log(multiplyBySix(4)); // Output: 24
+```
+
+## Creating a Generic Partial Application Function
+You can create a generic function for partial application:
+
+```
+function partial(fn, ...preFilledArgs) {
+  return function(...laterArgs) {
+    return fn(...preFilledArgs, ...laterArgs);
+  };
+}
+
+const add = (a, b, c) => a + b + c;
+const addPartially = partial(add, 1, 2);
+
+console.log(addPartially(3)); // Output: 6
+```
 
 
 
