@@ -1,7 +1,9 @@
 
 # call, apply & bind method in JS
 
-In JavaScript, call, apply, and bind are methods available on functions that allow you to set the this context and optionally pass arguments to the function. These methods are particularly useful for controlling how a function is invoked and what its this value is.
+Because functions are objects, they inherit from Function.prototype, which means they have access to methods like call, apply, and bind.
+
+In JavaScript, call, apply, and bind are methods available on functions that allow you to set the 'this' context and optionally pass arguments to the function. These methods are particularly useful for controlling how a function is invoked and what its this value is.
 
 # 'call' Method
 The call method allows you to invoke a function with a specified this value and arguments provided individually.
