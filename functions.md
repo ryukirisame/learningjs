@@ -85,9 +85,11 @@ IIFEs are functions that are defined and immediately executed. They are useful f
 
 # First Class Functions
 
-In JavaScript, functions are considered first-class citizens, meaning they are treated like any other variable. This allows functions to be assigned to variables, passed as arguments to other functions, returned from functions, and stored in data structures.
+In JavaScript, functions are considered first-class objects, meaning they are treated like any other variable. This allows functions to be assigned to variables, passed as arguments to other functions, returned from functions, and stored in data structures.
+They can also have properties and methods just like any other object. What distinguishes them from other objects is that functions can be called. So, functions are a special type of object called callable objects. This allows them to be treated like regular objects but also have the ability to be invoked.
 
-## Higher Order Functions
+
+# Higher Order Functions
 In JavaScript, a higher-order function is a function that either takes one or more functions as arguments, returns a function, or both.
 
 ## Our own implementation of map function
