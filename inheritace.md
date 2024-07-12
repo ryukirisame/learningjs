@@ -159,5 +159,47 @@ const boxes = [new Box(1), new Box(2), new Box(3)];
 We say that new Box(1) is an instance created from the Box constructor function. Box.prototype is not much different from the boxPrototype object we created previously — it's just a plain object. Every instance created from a constructor function will automatically have the constructor's prototype property as its [[Prototype]] — that is, Object.getPrototypeOf(new Box()) === Box.prototype.
 
 
+## A Catch
+
+Re-assigning Constructor.prototype (Box.prototype = {...}) is a bad idea.
+
+```
+function Box(value) {
+  this.value = value;
+}
+
+Box.prototype.getValue = function () {
+  console.log(this.value);
+};
+
+const box = new Box(1);
+box.getValue(); // 1
+
+// Mutate Box.prototype after an instance has already been created.
+// Here, we are re-assigning the prototype object itself.
+Box.prototype={
+    getValue(){
+        console.log(this.value + 2);
+    },
+    constructor: Box
+}
+
+const box2=new Box(1);
+
+box.getValue(); // 1. since its still referencing to old prototype object
+box2.getValue(); // 3. since its referencing to new prototype object;
+```
+<img src="https://github.com/user-attachments/assets/ff9eae1c-cf8d-47c6-9d05-30fe250e6362" width="600px"/>
+
+
+![image](https://github.com/user-attachments/assets/194d4888-199f-4101-bda7-e7945c9a430b)
+
+We see that the [[Prototype]] of box and box2 are now pointing to two different objects.
+Also, 'constructor' property in prototype of box2 is not available. 
+
+
+
+
+
 
 
