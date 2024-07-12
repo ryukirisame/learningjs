@@ -11,6 +11,7 @@
 JavaScript objects are dynamic "bags" of properties (referred to as **_own properties_**).
 
 Every object has an internal property [[Prototype]]. It is not directly accessible in JavaScript code. It refers to the prototype of the object, which is another object that the current object inherits properties and methods from. It's a hidden link that is used by the JavaScript engine to look up properties and methods on objects when they are not found directly on the object itself.
+
 ![image](https://github.com/user-attachments/assets/02d0f515-2a8b-49c0-b9ff-18b3032d7c6c)
 
 \__proto__ is an accessor property that allows you to get or set the [[Prototype]] of an object. It is widely supported in all major browsers, although it is not recommended to use it in production code due to its legacy nature and potential performance issues. It allows you to interact with the [[Prototype]] internal property directly. In modern JavaScript, it's more common and recommended to use Object.create(), Object.getPrototypeOf(), and Object.setPrototypeOf() to interact with prototypes.
@@ -57,3 +58,44 @@ console.log(o.d); // undefined
 // o.[[Prototype]].[[Prototype]].[[Prototype]] is null, stop searching,
 // no property found, return undefined.
 ```
+
+Property Shadowing: Basically property overriding. If the child and parent both has a certain property, then the child version of the property is preferred. 
+
+
+## Inheriting 'methods'
+
+When an inherited function is executed, the value of 'this' points to the inheriting object, not to the prototype object where the function is an own property.
+
+```
+const parent = {
+  value: 2,
+  method() {
+    return this.value + 1;
+  },
+};
+
+console.log(parent.method()); // 3
+// When calling parent.method in this case, 'this' refers to parent
+
+// child is an object that inherits from parent
+const child = {
+  __proto__: parent,
+};
+console.log(child.method()); // 3
+// When child.method is called, 'this' refers to child.
+// So when child inherits the method of parent,
+// The property 'value' is sought on child. However, since child
+// doesn't have an own property called 'value', the property is
+// found on the [[Prototype]], which is parent.value.
+
+child.value = 4; // assign the value 4 to the property 'value' on child.
+// This shadows the 'value' property on parent.
+// The child object now looks like:
+// { value: 4, __proto__: { value: 2, method: [Function] } }
+console.log(child.method()); // 5
+// Since child now has the 'value' property, 'this.value' means
+// child.value instead
+```
+
+
+
