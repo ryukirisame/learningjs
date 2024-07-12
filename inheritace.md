@@ -197,6 +197,8 @@ box2.getValue(); // 3. since its referencing to new prototype object;
 We see that the [[Prototype]] of box and box2 are now pointing to two different objects.
 Also, 'constructor' property in prototype of box2 is not available. 
 
+Unless you manually re-set the constructor property, the constructor function can no longer be traced from instance.constructor, which may break user expectation. Some built-in operations will read the constructor property as well, and if it is not set, they may not work as expected
+
 
 
 
