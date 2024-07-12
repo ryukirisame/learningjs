@@ -200,8 +200,46 @@ Also, 'constructor' property in prototype of box2 is not available.
 Unless you manually re-set the constructor property, the constructor function can no longer be traced from instance.constructor, which may break user expectation. Some built-in operations will read the constructor property as well, and if it is not set, they may not work as expected
 
 
+## Implicit constructors of literals
 
+Some literal syntaxes in JavaScript create instances that implicitly set the [[Prototype]]. For example:
 
+```
+// Object literals (without the `__proto__` key) automatically
+// have `Object.prototype` as their `[[Prototype]]`
+const object = { a: 1 };
+Object.getPrototypeOf(object) === Object.prototype; // true
 
+// Array literals automatically have `Array.prototype` as their `[[Prototype]]`
+const array = [1, 2, 3];
+Object.getPrototypeOf(array) === Array.prototype; // true
 
+// RegExp literals automatically have `RegExp.prototype` as their `[[Prototype]]`
+const regexp = /abc/;
+Object.getPrototypeOf(regexp) === RegExp.prototype; // true
+```
 
+## Building longer inheritance chains
+
+To build longer prototype chains, we can set the [[Prototype]] of Constructor.prototype via the Object.setPrototypeOf() function.
+
+```
+function Base() {}
+function Derived() {}
+// Set the `[[Prototype]]` of `Derived.prototype`
+// to `Base.prototype`
+Object.setPrototypeOf(Derived.prototype, Base.prototype);
+
+const obj = new Derived();
+// obj ---> Derived.prototype ---> Base.prototype ---> Object.prototype ---> null
+```
+
+In class terms, this is equivalent to using the 'extends' syntax.
+
+```
+class Base {}
+class Derived extends Base {}
+
+const obj = new Derived();
+// obj ---> Derived.prototype ---> Base.prototype ---> Object.prototype ---> null
+```
