@@ -97,5 +97,16 @@ console.log(child.method()); // 5
 // child.value instead
 ```
 
+# Constructors
 
+Here are few things we should know about functions: 
+
+1. Functions in JS are also objects. They are special objects that can be invoked, called callable objects. So, functions can have properties just like an object does.
+2. Every constructor function (functions in general) has a prototype property:
+    - This 'prototype' property is an object.
+    - It contains properties and methods that should be shared by all instances of the constructor function.
+3. When an object is created using the 'new' keyword, the new object’s internal [[Prototype]] (which can be accessed via \__proto__ in modern browsers) is set to the constructor function’s prototype property.
+4. The 'prototype' property in constructor function has a property called 'constructor' which references the constructor function itself. so when objects are created using new keyword and the 'prototype' is inherited then we can simply do 'obj.constructor' to get the original constructor from which the object was created.
+
+5. 
 
