@@ -111,3 +111,11 @@ Can have an implicit return for single-expression functions, where the expressio
 ```
 const arrowFunction = (a, b) => a + b;
 ```
+
+## 'prototype' Property
+
+**Traditional Function**
+Have a default 'prototype' property. This 'prototype' object will be set as [[Prototype]] of every instance created if the function is used as constructor.
+
+**Arrow Function**
+Doesn't have a default 'prototype' property.
