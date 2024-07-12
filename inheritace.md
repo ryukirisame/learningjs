@@ -97,7 +97,7 @@ console.log(child.method()); // 5
 // child.value instead
 ```
 
-# Constructors
+## Functions
 
 Here are few things we should know about functions: 
 
@@ -108,5 +108,56 @@ Here are few things we should know about functions:
 3. When an object is created using the 'new' keyword, the new object’s internal [[Prototype]] (which can be accessed via \__proto__ in modern browsers) is set to the constructor function’s prototype property.
 4. The 'prototype' property in constructor function has a property called 'constructor' which references the constructor function itself. so when objects are created using new keyword and the 'prototype' is inherited then we can simply do 'obj.constructor' to get the original constructor from which the object was created.
 
-5. 
+<img src="https://github.com/user-attachments/assets/49ded817-60f7-4e0d-a36b-5be20cf4ac31" width="600px"/>
+
+## Constructor Functions
+
+Suppose we are to create a series of boxes, where each box is an object that contains a value which can be accessed through a getValue function. A naive implementation would be:
+
+```
+const boxes = [
+  { value: 1, getValue() { return this.value; } },
+  { value: 2, getValue() { return this.value; } },
+  { value: 3, getValue() { return this.value; } },
+];
+```
+
+This is subpar (below standard) code, because each instance has its own function property that does the same thing, which is redundant and unnecessary. 
+Instead, we can move getValue to the [[Prototype]] of all boxes:
+```
+const boxPrototype = {
+  getValue() {
+    return this.value;
+  },
+};
+
+const boxes = [
+  { value: 1, __proto__: boxPrototype },
+  { value: 2, __proto__: boxPrototype },
+  { value: 3, __proto__: boxPrototype },
+];
+```
+
+This way, all boxes' getValue method will refer to the same function, lowering memory usage. 
+However, manually binding the __proto__ for every object creation is still very inconvenient. This is when we would use a constructor function, which automatically sets the [[Prototype]] for every object manufactured. Constructors are functions called with 'new'.
+
+```
+// A constructor function
+function Box(value) {
+  this.value = value;
+}
+
+// Properties all boxes created from the Box() constructor
+// will have
+Box.prototype.getValue = function () {
+  return this.value;
+};
+
+const boxes = [new Box(1), new Box(2), new Box(3)];
+```
+
+We say that new Box(1) is an instance created from the Box constructor function. Box.prototype is not much different from the boxPrototype object we created previously — it's just a plain object. Every instance created from a constructor function will automatically have the constructor's prototype property as its [[Prototype]] — that is, Object.getPrototypeOf(new Box()) === Box.prototype.
+
+
+
 
