@@ -11,4 +11,6 @@ When a function is called with the new keyword, the function will be used as a c
 4. If the constructor function returns a non-primitive, this return value becomes the result of the whole new expression (In this case, the new object is not an instance of Constructor). Otherwise, if the constructor function doesn't return anything or returns a primitive, newInstance is returned instead. (Normally constructors don't return a value, but they can choose to do so to override the normal object creation process.)
 
 - A function can know whether it is invoked with new by checking ```new.target```
+- When you call a function without the new keyword, JavaScript treats it as a normal function call.
+- When you call a function with the new keyword, JavaScript treats it as a constructor function call. 
 
