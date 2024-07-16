@@ -162,5 +162,115 @@ const addPartially = partial(add, 1, 2);
 console.log(addPartially(3)); // Output: 6
 ```
 
+# Currying
+
+Currying is the process of breaking down a function that takes multiple arguments into a series of unary (single-argument) functions. Instead of taking all arguments at once, a curried function takes the first argument, and returns a new function that takes the second argument, and so on, until all arguments have been provided and the original function can be executed.
+
+That is, when we turn a function call sum(1,2,3) into sum(1)(2)(3). 
+
+NOTE: The number of arguments a function takes is also called arity.
+
+### Why currying?
+- Currying helps you avoid passing the same variable again and again.
+- It helps to create a higher order function.
+
+Example:
+
+```
+function sum(a, b, c) {
+    return a + b + c;
+}
+sum(1,2,3); // 6
+```
+
+Let’s create a curried version of the function and see how we would call the same function (and get the same result) in a series of calls:
+```
+function sum(a) {
+    return (b) => {
+        return (c) => {
+            return a + b + c
+        }
+    }
+}
+console.log(sum(1)(2)(3)) // 6
+```
+
+### Currying with Arrow Functions
+Using arrow functions, currying can be more concise:
+```
+const curriedAdd = a => b => a + b;
+
+console.log(curriedAdd(2)(3)); // Output: 5
+```
+
+### Currying Functions with More Arguments
+For functions with more arguments, currying involves nesting more functions:
+
+```
+const curriedMultiply = a => b => c => a * b * c;
+
+console.log(curriedMultiply(2)(3)(4)); // Output: 24
+
+const multiplyByTwo = curriedMultiply(2);
+const multiplyByTwoAndThree = multiplyByTwo(3);
+
+console.log(multiplyByTwoAndThree(4)); // Output: 24
+```
+
+# Currying vs. Partial Application in JavaScript
+
+Some might start to think that the number of nested functions a curried function has depends on the number of arguments it receives. Yes, that makes it a curry.
+
+Let’s take same sum example:
+```
+function sum(a) {
+    return (b, c) => {
+        return a * b * c
+    }
+}
+```
+It can be called like this:
+
+```
+let x = sum(10);
+x(3,12);
+x(20,12);
+x(20,13);
+// OR
+sum(10)(3,12);
+sum(10)(20,12);
+sum(10)(20,13);
+```
+The above function expects three arguments and has two nested functions, unlike our previous version, which expected three arguments and had three nesting functions. This version isn’t a curry. We just did a partial application of the sum function.
+
+Currying and partial application are related because of closure, but they are different concepts.
+
+Partial application transforms a function into another function with smaller arity.
+
+```
+function sum1(x, y, z) {
+    return sum2(x,y,z)
+}
+// to
+function sum1(x) {
+    return (y,z) => {
+        return sum2(x,y,z)
+    }
+}
+```
+For currying, it would look like this:
+
+```
+function sum1(x) {
+    return (y) = > {
+        return (z) = > {
+            return sum2(x,y,z)
+        }
+    }
+}
+```
+Currying creates nesting functions according to the number of the arguments of the function. Each function receives an argument. If there is no argument, there is no currying.
+
+
 
 
