@@ -91,8 +91,37 @@ function throttle(fn, delay) {
 }
 ```
 
+### Implementing throttling using setTimeout
+```
+function callAPI(a, b) {
+  console.log(a, b);
+
+  console.log("Calling api...");
+}
+
+function throttle(fn, delay) {
+  let flag = true;
+
+  return function () {
+    const context = this;
+    const args = arguments;
+    if (flag) {
+      fn.apply(context, args);
+      flag = false;
+      setTimeout(() => {
+        flag = true;
+      }, delay);
+    } else {
+      console.log("blocked");
+    }
+  };
+}
+
+const throttledCallApi = throttle(callAPI, 1000);
+```
+
 - The implementation depends on the particular use case. This is a simple example where we are completely blocking the execution of function call within a specific time period.
-- It may happen that for every request to function call, we can reschedule the call after the time period expires.
+
 
 ### Use Case: Scroll Event Listener
 An example use case is attaching a listener to the scroll event of a webpage. Since the scroll event can fire dozens of times per second, throttling can be used to limit the number of times your callback function executes, improving performance.
