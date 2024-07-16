@@ -241,7 +241,7 @@ sum(10)(3,12);
 sum(10)(20,12);
 sum(10)(20,13);
 ```
-The above function expects three arguments and has two nested functions, unlike our previous version, which expected three arguments and had three nesting functions. This version isn’t a curry. We just did a partial application of the sum function.
+The above function expects three arguments and has two nested functions. This version isn’t a curry. We just did a partial application of the sum function.
 
 Currying and partial application are related because of closure, but they are different concepts.
 
