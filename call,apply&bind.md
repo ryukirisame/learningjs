@@ -272,5 +272,29 @@ function sum1(x) {
 Currying creates nesting functions according to the number of the arguments of the function. Each function receives an argument. If there is no argument, there is no currying.
 
 
+# sum(1)(2)(3)(4)..( n)() Problem
 
+we can utilize the concept of closures and recursive function calls.
 
+```
+function sum(a) {
+    function innerSum(b) {
+        if (b === undefined) {
+            return a;
+        }
+        return sum(a + b);
+    }
+}
+
+console.log(sum(1)(2)(3)(4)()); // Output: 10
+console.log(sum(5)(10)(15)());  // Output: 30
+console.log(sum(1)(2)(3)());    // Output: 6
+```
+
+- Initial Call: When sum(a) is called, it initializes a with the first argument.
+- Inner Function: The innerSum(b) function is defined inside sum. This function takes the next argument b and:
+    - If b is undefined, it means the chain has ended, so it returns the accumulated sum a.
+    - Otherwise, it recursively calls sum(a + b), which creates a new closure with the updated sum and continues the chain.
+
+### Recursive Nature
+The key aspect of this implementation is the recursive call return sum(a + b), which creates a new instance of the sum function with the updated accumulated sum. This recursive approach leverages the power of closures to maintain state across multiple invocations and allows the chaining to continue until the terminating condition (no argument) is met.
