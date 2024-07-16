@@ -58,6 +58,9 @@ debouncedSave(); // This call will reset the timer again
 When applied to rate limiting, debouncing helps in scenarios where you want to prevent a function from executing too frequently within a short time span. For example, consider a scenario where you have a search input field and you want to trigger an API call to fetch search results. If the user is typing rapidly, you might want to wait until they pause typing before making the API call to avoid overwhelming the server with requests.
 
 
+### Use Case: Search Input Field
+Consider a search input field that fetches suggestions from a server as the user types. Without debouncing, every keystroke would send a request, potentially leading to hundreds of requests per minute. Debouncing allows us to delay the function call until the user has stopped typing for a predefined time.
+
 # Throttling
 
 Throttling is a technique used to limit the rate at which a function is called. Throttling transforms a function such that it can only be called once in a specific interval of time.
@@ -91,6 +94,11 @@ function throttle(fn, delay) {
 - The implementation depends on the particular use case. This is a simple example where we are completely blocking the execution of function call within a specific time period.
 - It may happen that for every request to function call, we can reschedule the call after the time period expires.
 
+### Use Case: Scroll Event Listener
+An example use case is attaching a listener to the scroll event of a webpage. Since the scroll event can fire dozens of times per second, throttling can be used to limit the number of times your callback function executes, improving performance.
+
+# Debouncing vs Throttling
+Debouncing postpones/delays the execution until after a period of inactivity, while throttling limits the execution to a fixed number of times over an interval.
 
 
 
