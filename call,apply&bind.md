@@ -77,6 +77,9 @@ In this example:
 'this' inside greet refers to person. <br>
 The arguments 'Hello' and '!' are passed as an array.
 
+
+Use apply() when the number of arguments is not known beforehand or when the arguments are already in an array-like structure (e.g., arguments object or an array).
+
 # 'bind' Method
 The bind method creates a new function with a fixed 'this' value and some arguments already set.
 
