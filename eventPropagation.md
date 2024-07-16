@@ -50,7 +50,7 @@ It consists of three phases:
 ```
 
 
-## Capturing Phase
+## Capturing Phase/ Trickling Phase
 
 Event Capturing is a method of Event Propagation in which the event is propagated from the top of the hierarchy and goes all the way down to the target element.
 
