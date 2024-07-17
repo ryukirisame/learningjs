@@ -99,11 +99,12 @@ Event Delegation: Using event propagation to attach a single event listener to a
 Advantage of event delegation:
 
 1. Performance Optimization - It Improves the performance by reducing the number of event listeners from the DOM. Instead of attaching an event listener to each individual child element, you attach a single event listener to the parent element.
-
 2. Memory - Since less event listeners are added it decrease the memory usage, compared to attaching an event listener to each and every element.
-
 3. Code Readability, Easy Maintenance
 
+Limitations of event delegation:
+1. All the events are not bubbled up, some events like load, resize, blur, focus are not bubbled up.
+2. If e.stopPropogation is used in child, then events are not bubbled up, and hence event delegation is not possible in that case.
 
 # closest() method
 
