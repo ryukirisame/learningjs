@@ -94,7 +94,7 @@ document.getElementById('myButton').addEventListener('click', function(event) {
 ### Application of Event Propagation
 
 ### Event Delegation
-Event Delegation: Using event propagation to attach a single event listener to a parent element instead of multiple listeners to each child.
+Event Delegation: Using event propagation to attach a single event listener to a parent element instead of multiple listeners to each child. It is possible because of event bubbling.
 
 Advantage of event delegation:
 
