@@ -51,6 +51,10 @@ Here, we see that we are passing a callback function to createOrder API. Now, th
 
 
 
+# Advanced Promises Methods
+
+## Promises.all()
+
 
 
 
