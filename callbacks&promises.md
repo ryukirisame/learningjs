@@ -191,5 +191,28 @@ Promise.race([fetchPromise, timeoutPromise])
 ```
 
 
+## Promise.any()
+```Promise.any(iterable)``` is a method in JavaScript that returns a promise that resolves as soon as any of the promises in the iterable resolves. If none of the promises resolve (i.e., all of them reject), it returns a promise that rejects with an AggregateError containing all the rejection reasons.
 
 
+### How It Works
+**Resolve**: Promise.any() returns a promise that resolves with the value of the first promise that resolves.
+
+**Reject**: If all the promises in the iterable reject, Promise.any() returns a promise that rejects with an AggregateError, which is an object that aggregates individual errors together.
+
+
+Example
+```
+const promise1 = new Promise((resolve, reject) => setTimeout(reject, 100, 'Error 1'));
+const promise2 = new Promise((resolve, reject) => setTimeout(reject, 200, 'Error 2'));
+const promise3 = new Promise((resolve, reject) => setTimeout(reject, 300, 'Error 3'));
+
+Promise.any([promise1, promise2, promise3])
+  .then((value) => {
+    console.log(value);
+  })
+  .catch((error) => {
+    console.error(error); // AggregateError: All promises were rejected
+    console.error(error.errors); // ["Error 1", "Error 2", "Error 3"]
+  });
+```
