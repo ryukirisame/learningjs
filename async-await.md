@@ -94,6 +94,7 @@ Step 7: console.log('B: After calling fetchData'); is executed, and "B: After ca
 ### Network Request Completes (Promise Resolution)
 Step 8: Meanwhile, the fetch request completes, and the promise returned by fetch is resolved with the response object.
 - Microtasks Queue: The resolved promise triggers a microtask. The event loop adds this microtask to the microtasks queue.
+- So basically, when the promise gets resolved, a callback function called microtask is pushed to the microtask queue. This callback function contains the code to resume the execution of the fetchData() function from where it was paused.
 
 ### Resuming the async Function
 Step 9: The event loop checks the call stack and finds it empty. It then processes the microtasks queue.
