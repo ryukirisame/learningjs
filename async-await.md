@@ -207,5 +207,34 @@ In this code:
 3. No Error Handling: The fetchData function does not have a .catch() method or a try...catch block to handle the rejection.
 
 
+# Parallel execution using Promise.all()
 
+```
+async function fetchData() {
+  try {
+    // Perform multiple fetch requests in parallel
+    let [response1, response2] = await Promise.all([
+      fetch('https://jsonplaceholder.typicode.com/todos/1'),
+      fetch('https://jsonplaceholder.typicode.com/todos/2')
+    ]);
+
+    // Wait for both responses to be converted to JSON
+    let [data1, data2] = await Promise.all([
+      response1.json(),
+      response2.json()
+    ]);
+
+    // Return the combined results
+    return [data1, data2];
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    // Handle the error (e.g., return a default value or rethrow the error)
+    return [];
+  }
+}
+
+fetchData().then(data => console.log(data));
+```
+
+In this case, all tasks run in parallel, and the total execution time will be determined by the longest task, not the sum of all tasks. 
 
