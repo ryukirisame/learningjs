@@ -72,12 +72,12 @@ console.log('B: After calling fetchData');
 ### Initial Code Execution
 When JavaScript starts executing this code:
 
--Step 1: console.log('A: Before calling fetchData'); is executed, and "A: Before calling fetchData" is logged to the console.
--Step 2: fetchData() is called, and the fetchData function begins executing.
+- Step 1: ```console.log('A: Before calling fetchData');``` is executed, and "A: Before calling fetchData" is logged to the console.
+- Step 2: fetchData() is called, and the fetchData function begins executing.
 
 ### Entering the async Function
 - Step 3: The fetchData function is now on the call stack. The code inside fetchData starts running.
-- Step 4: console.log('1: Start fetching data'); is executed, and "1: Start fetching data" is logged to the console.
+- Step 4: ```console.log('1: Start fetching data');``` is executed, and "1: Start fetching data" is logged to the console.
 
 ### Encountering the First await
 Step 5: The code reaches ```let response = await fetch('https://jsonplaceholder.typicode.com/todos/1');```.
@@ -98,7 +98,7 @@ Step 8: Meanwhile, the fetch request completes, and the promise returned by fetc
 ### Resuming the async Function
 Step 9: The event loop checks the call stack and finds it empty. It then processes the microtasks queue.
 - Resuming fetchData: The fetchData function resumes from where it was paused. The response object is now available.
-- Step 10: console.log('2: Response received'); is executed, and "2: Response received" is logged to the console.
+- Step 10: ```console.log('2: Response received');``` is executed, and "2: Response received" is logged to the console.
 
 ### Encountering the Second await
 Step 11: The code now reaches ```let data = await response.json();```.
