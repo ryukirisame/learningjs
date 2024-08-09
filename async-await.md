@@ -91,12 +91,51 @@ Step 6: The fetchData function is suspended at the await line. It is removed fro
 ### Continuing with the Synchronous Code
 Step 7: console.log('B: After calling fetchData'); is executed, and "B: After calling fetchData" is logged to the console.
 
+### Network Request Completes (Promise Resolution)
+Step 8: Meanwhile, the fetch request completes, and the promise returned by fetch is resolved with the response object.
+- Microtasks Queue: The resolved promise triggers a microtask. The event loop adds this microtask to the microtasks queue.
+
+### Resuming the async Function
+Step 9: The event loop checks the call stack and finds it empty. It then processes the microtasks queue.
+- Resuming fetchData: The fetchData function resumes from where it was paused. The response object is now available.
+- Step 10: console.log('2: Response received'); is executed, and "2: Response received" is logged to the console.
+
+### Encountering the Second await
+Step 11: The code now reaches ```let data = await response.json();```.
+- What Happens Here?
+  - response.json() is called, which returns a promise that resolves when the JSON data is fully parsed.
+  - The function is paused again at this await, and fetchData is removed from the call stack.
+
+### JSON Parsing Completes
+Step 12: The JSON parsing completes, and the promise returned by response.json() resolves with the parsed data.
+- Microtasks Queue: The resolution of this promise triggers another microtask. The event loop adds it to the microtasks queue.
 
 
+### Final Resumption of the async Function
+Step 13: The event loop processes the microtasks queue again.
+- Resuming fetchData: The fetchData function resumes from where it was paused. The data object is now available.
+- Step 14: console.log('3: Data processed'); is executed, and "3: Data processed" is logged to the console.
 
+### Returning from the async Function
+Step 15: The fetchData function reaches its end, and the return data; statement is executed.
+- What Happens Here?
+  - The data object is returned, but since fetchData is an async function, it is automatically wrapped in a resolved promise.
 
+### Handling the Final Result
+- Step 16: The promise returned by fetchData() is now resolved with the data.
+  - The ```.then(result => { console.log('4: Final result', result); })``` attached to fetchData() is now triggered.
+  - Step 17: The callback function inside .then() is pushed onto the call stack and executed.
+  - Step 18: console.log('4: Final result', result); is executed, and "4: Final result [data]" is logged to the console.
 
-
+### Final Output Order
+```
+A: Before calling fetchData
+1: Start fetching data
+B: After calling fetchData
+2: Response received
+3: Data processed
+4: Final result { ...data... }
+```
 
 
 
