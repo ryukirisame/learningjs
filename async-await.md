@@ -138,6 +138,43 @@ B: After calling fetchData
 4: Final result { ...data... }
 ```
 
+## Important Point
+In our example, we had 2 await statements. Let's suppose the first one took 5 secs to complete, and the second one takes 3 secs to complete. So the total time will be 5 + 3 = 8 secs.
 
+# Exception/Error Handling
 
+```
+async function fetchData() {
+  try {
+    let response = await fetch('https://jsonplaceholder.typicode.com/todos/1');
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+    let data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    // Handle error (e.g., return a default value or rethrow the error)
+    return null;
+  }
+}
+```
+
+- To handle errors in async functions, we use try...catch block.
+- When using await, any error thrown by the promise will be propagated to the nearest catch block. This allows you to handle errors as they occur.
+- If an error is not handled within the async function, it will propagate to the caller of the function. You can handle such errors using .catch() when calling the async function or by using try...catch in the calling context.
+
+```
+async function fetchData() {
+  let response = await fetch('https://jsonplaceholder.typicode.com/invalid-endpoint');
+  let data = await response.json();
+  return data;
+}
+
+fetchData().then(data => {
+  console.log('Data:', data);
+}).catch(error => {
+  console.error('Error in fetchData:', error);
+});
+```
 
