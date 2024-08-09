@@ -178,3 +178,34 @@ fetchData().then(data => {
 });
 ```
 
+## When does an error occur?
+
+#### 1. Network or API failures
+When making network requests (e.g., using fetch), errors can occur due to network issues, invalid URLs, or server-side problems.
+
+#### 2. Promise Rejection
+If the promise returned by an await expression is rejected, it will throw an error.
+
+#### 3. Invalid Data Handling
+Errors can also occur when processing or parsing data. For instance, if you attempt to parse a non-JSON response using response.json().
+
+#### 4. Unhandled Promise Rejections
+If an async function returns a promise that gets rejected and the rejection is not handled properly, it can lead to unhandled promise rejections.
+```
+async function fetchData() {
+  let response = await fetch('https://jsonplaceholder.typicode.com/invalid-endpoint');
+  let data = await response.json();
+  return data;
+}
+
+fetchData(); // No error handling here
+```
+In this code:
+
+1. Requesting Data: fetchData makes a request to an invalid endpoint.
+2. Error Occurs: Since the endpoint is invalid, the fetch request will fail, and the promise returned by fetch will be rejected.
+3. No Error Handling: The fetchData function does not have a .catch() method or a try...catch block to handle the rejection.
+
+
+
+
