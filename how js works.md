@@ -308,7 +308,7 @@ const instance = new MyConstructor();
 console.log(instance.value); // Logs 42
 ```
 
-5. Event Handlers
+5. Event Handlers:
 In DOM event handlers, this usually refers to the element that received the event.
 ```
 document.querySelector('button').addEventListener('click', function() {
@@ -316,8 +316,8 @@ document.querySelector('button').addEventListener('click', function() {
 });
 ```
 
-6. Arrow Functions
-Arrow functions are unique because they don't have their own `this` binding. Instead, they inherit `this` from the surrounding lexical context—the scope in which they were defined. This behavior makes arrow functions particularly useful in scenarios where you want to maintain the `this` value from the outer scope, such as in callback functions or event handlers.
+6. Arrow Functions:
+Arrow functions are unique because they don't have their own 'this' binding. Instead, they inherit 'this' from the surrounding lexical context—the scope in which they were defined. This behavior makes arrow functions particularly useful in scenarios where you want to maintain the 'this' value from the outer scope, such as in callback functions or event handlers.
 
 ```
 const obj = {
