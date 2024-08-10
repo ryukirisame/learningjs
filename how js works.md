@@ -328,6 +328,16 @@ Arrow functions are unique because they don't have their own 'this' binding. Ins
 ```
 const obj = {
     value: 42,
+    myMethod: () => {
+            console.log(this); // Logs the `window` object
+        }   
+};
+obj.myMethod();
+```
+
+```
+const obj = {
+    value: 42,
     myMethod: function() {
         const arrowFunction = () => {
             console.log(this); // Logs the `obj` object
