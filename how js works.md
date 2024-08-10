@@ -275,9 +275,9 @@ In this alternative solution:
 
 # 'this' Binding
 
-The value of this depends on how a function is called and not necessarily where it is defined.
-
-In JavaScript, the value of this is determined by the execution context in which a function is called. Here are the primary rules for determining this binding:
+- The value of this depends on how a function is called and not necessarily where it is defined.
+- "this substitution" refers to the concept of how the 'this' keyword's value is determined or "substituted" in various contexts in JavaScript.
+- The value of 'this' is determined by the execution context in which a function is called. Here are the primary rules for determining this binding:
 1.	Global Context: When a function is called in the global context(outside any function), this refers to the global object (which is window in browsers and global in Node.js).
 ```
 console.log(this); // In a browser, this logs the `window` object
