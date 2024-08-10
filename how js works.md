@@ -308,7 +308,16 @@ const instance = new MyConstructor();
 console.log(instance.value); // Logs 42
 ```
 
-**Arrow Functions**: Arrow functions do not have their own 'this' binding. Instead, they inherit 'this' from the surrounding lexical context (the scope in which they were defined).
+5. Event Handlers
+In DOM event handlers, this usually refers to the element that received the event.
+```
+document.querySelector('button').addEventListener('click', function() {
+  console.log(this); // Logs the button element
+});
+```
+
+6. Arrow Functions
+Arrow functions do not have their own 'this' binding. Instead, they inherit 'this' from the surrounding lexical context (the scope in which they were defined).
 ```
 const obj = {
     value: 42,
@@ -323,6 +332,8 @@ obj.myMethod();
 ```
 
 <br>
+
+
 
 # Hoisting
 
