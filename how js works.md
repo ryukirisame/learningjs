@@ -278,7 +278,7 @@ In this alternative solution:
 - The value of this depends on how a function is called and not necessarily where it is defined.
 - "this substitution" refers to the concept of how the 'this' keyword's value is determined or "substituted" in various contexts in JavaScript.
 - The value of 'this' is determined by the execution context in which a function is called. Here are the primary rules for determining this binding:
-1.	Global Context: When a function is called in the global context(outside any function), this refers to the global object (which is window in browsers and global in Node.js).
+1.	Global Context: When 'this' is referenced in the global execution context (outside of any function), it refers to the global object. (which is window in browsers and global in Node.js).
 ```
 console.log(this); // In a browser, this logs the `window` object
 ```
@@ -317,7 +317,8 @@ document.querySelector('button').addEventListener('click', function() {
 ```
 
 6. Arrow Functions
-Arrow functions do not have their own 'this' binding. Instead, they inherit 'this' from the surrounding lexical context (the scope in which they were defined).
+Arrow functions are unique because they don't have their own `this` binding. Instead, they inherit `this` from the surrounding lexical context—the scope in which they were defined. This behavior makes arrow functions particularly useful in scenarios where you want to maintain the `this` value from the outer scope, such as in callback functions or event handlers.
+
 ```
 const obj = {
     value: 42,
@@ -329,6 +330,18 @@ const obj = {
     }
 };
 obj.myMethod();
+```
+
+Additional Use Case:
+```
+function Timer() {
+    this.seconds = 0;
+    setInterval(() => {
+        this.seconds++;
+        console.log(this.seconds);
+    }, 1000);
+}
+const timer = new Timer(); // `this` in the arrow function refers to the Timer instance
 ```
 
 <br>
