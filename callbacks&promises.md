@@ -151,7 +151,7 @@ The .then() method is used to specify what should happen when the Promise is ful
 
 #### Returning Values
 
-1. If the callback function passed to .then() returns a non-Promise value, that value is automatically wrapped in a Promise. The new Promise will resolve with this value.
+1. If the callback function attached to .then() returns a non-Promise value, that value is automatically wrapped in a Promise. The new Promise will resolve with this value.
 ```
 Promise.resolve(1)
   .then(value => {
