@@ -188,6 +188,33 @@ The .catch() method is a shorthand for handling errors (rejections) that occur i
 The .finally() method is used to execute code after the Promise has been settled, regardless of whether it was fulfilled or rejected. This is useful for cleaning up resources or performing actions that should happen after the asynchronous operation is complete, no matter the outcome.
 
 
+## Promise Chaining
+One of the powerful features of Promises is chaining. Since .then() also returns a Promise, you can chain multiple asynchronous operations in sequence, ensuring that each operation completes before the next one starts.
+
+```
+fetchData()
+  .then((response) => {
+    return processResponse(response);
+  })
+  .then((processedData) => {
+    return saveData(processedData);
+  })
+  .then(() => {
+    console.log('Data saved successfully!');
+  })
+  .catch((error) => {
+    console.error('An error occurred:', error);
+  });
+```
+
+## Static Methods of Promises
+
+- Promise.resolve(value): Returns a Promise that is resolved with the given value.
+- Promise.reject(reason): Returns a Promise that is rejected with the given reason.
+- Promise.all()
+- Promise.allSettled()
+- Promise.any()
+- Promise.race()
 
 # Advanced Promises Methods
 
