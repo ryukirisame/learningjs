@@ -299,6 +299,12 @@ const obj = {
 };
 obj.myMethod(); // Logs 42
 ```
+```
+function myFunction() {
+    console.log(this);
+}
+window.myFunction(); // Will print window object 
+```
 4.	Constructor Context: When a function is used as a constructor (with the new keyword), this refers to the newly created object.
 ```
 function MyConstructor() {
