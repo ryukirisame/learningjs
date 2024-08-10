@@ -139,8 +139,53 @@ You create a Promise using the Promise constructor, which takes a function (call
 
 
 ### Using Promises: .then(), .catch(), and .finally()
+The promise methods then(), catch(), and finally() are used to associate further action with a promise that becomes settled.
+
+NOTE: The catch() and finally() methods call then() internally and make error handling less verbose. For example, a catch() is really just a then() without passing the fulfillment handler.
+
+### .then()
+The .then() method is used to specify what should happen when the Promise is fulfilled. It takes two arguments:
+
+- A function that handles the resolved value (fulfilled state).
+- (Optional) A function that handles the rejection (rejected state).
+
+#### Returning Values
+
+1. If the callback function passed to .then() returns a non-Promise value, that value is automatically wrapped in a Promise. The new Promise will resolve with this value.
+```
+Promise.resolve(1)
+  .then(value => {
+    **return** value + 1;  // Returns a non-Promise value (2)
+  })
+  .then(result => console.log(result));  // Logs 2
+```
+
+2. If the callback function returns a Promise, .then() returns that Promise directly. The resulting Promise will adopt the state of the returned Promise (resolved or rejected).
+```
+Promise.resolve(1)
+  .then(value => {
+    **return** Promise.resolve(value + 1);  // Returns an existing Promise
+  })
+  .then(result => console.log(result));  // Logs 2
+```
+
+3. If the callback function throws an error, or returns a Promise that is rejected, the returned Promise will be rejected with that error.
+```
+Promise.resolve(1)
+  .then(value => {
+    throw new Error("Something went wrong!");  // Throws an error
+  })
+  .catch(error => console.log(error.message));  // Logs "Something went wrong!"
+```
+
+### .catch()
+The .catch() method is a shorthand for handling errors (rejections) that occur in the Promise chain.
+
+- In a Promise chain, if an error occurs in any .then() block, it will be passed down to the nearest .catch() block. This is because each .then() block returns a new Promise, and if this Promise is rejected, it will propagate down the chain until it finds a .catch() block that can handle the error.
 
 
+### .finally()
+The .finally() method is used to execute code after the Promise has been settled, regardless of whether it was fulfilled or rejected. This is useful for cleaning up resources or performing actions that should happen after the asynchronous operation is complete, no matter the outcome.
 
 
 
