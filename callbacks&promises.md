@@ -381,3 +381,8 @@ Promise.any([promise1, promise2, promise3])
     console.error(error.errors); // ["Error 1", "Error 2", "Error 3"]
   });
 ```
+
+
+# Bonus
+Build your own Promise
+https://levelup.gitconnected.com/understand-javascript-promises-by-building-a-promise-from-scratch-84c0fd855720
