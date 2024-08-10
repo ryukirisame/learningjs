@@ -48,6 +48,36 @@ Here, we see that we are passing a callback function to createOrder API. Now, th
 - Multiple Invocations: What if the proceedToPayment function is called multiple times due to a bug or logic error inside createOrder?
 - Error Handling: We are reliant on the createOrder API to handle errors properly. If it has bugs, our callback may not execute correctly or at all.
 
+# Promises 
+
+Callbacks come with their own set of challenges, such as Callback Hell and Inversion of Control. To address these issues, JavaScript introduced Promises—a more robust and manageable way to handle asynchronous code.
+
+### Transitioning to Promises
+
+```
+const cart = ["jordan shoe", "titan watch", "van heusen shirt", "jeans"];
+
+api.createOrder(cart)
+    .then(() => api.proceedToPayment())
+    .then(() => api.showOrderSummary())
+    .then(() => api.updateWallet())
+    .then(() => console.log("Order process completed successfully!"))
+    .catch(error => console.error("An error occurred:", error));
+```
+
+#### Benefits of Using Promises:
+
+- Flattened Structure: The code is no longer nested, making it easier to read and understand.
+- Chained Operations: Promises allow you to chain operations, ensuring they execute in sequence without deep nesting.
+- Centralized Error Handling: The .catch() block handles errors from any step in the chain, making error management simpler and more consistent.
+- Control Over Execution: You maintain control over the flow of your code. You decide when and how the next step is executed, reducing the risk of unexpected behavior.
+- Predictability: Promises provide a predictable and consistent way to handle asynchronous operations, reducing the chances of bugs and errors.
+- Error Propagation: If an error occurs in createOrder, it will automatically propagate to the .catch() block, ensuring that issues are handled properly.
+
+
+##
+
+
 
 
 
