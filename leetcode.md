@@ -27,9 +27,9 @@ Here, the numbers are converted to strings ("10", "5", "20", "1") and then sorte
 The function takes two arguments, 'a' and 'b', representing two elements being compared. 
 
 It should return a number where:
-- A negative value indicates that a should come before b.
-- A positive value indicates that a should come after b.
-- Zero or NaN indicates that a and b are considered equal.
+- A negative value indicates that 'a' should come before 'b'.
+- A positive value indicates that 'a' should come after 'b'.
+- Zero or NaN indicates that 'a' and 'b' are considered equal.
   
 To memorize this, remember that (a, b) => a - b sorts numbers in ascending order.
 
