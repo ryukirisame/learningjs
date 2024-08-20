@@ -137,3 +137,12 @@ Object.getOwnPropertyNames() is a method in JavaScript that returns an array of 
 const arr=[2,3,4,5];
 console.log(Object.getOwnPropertyNames(arr));  // [ '0', '1', '2', '3', 'length' ]
 ```
+
+# Object spread
+
+When you use the spread operator (...) with an object in JavaScript, it expands the object's own enumerable properties into a new object.
+
+
+
+
+
