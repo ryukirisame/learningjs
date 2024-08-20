@@ -12,6 +12,7 @@ Every property in JavaScript objects can be classified by three factors:
 3. Own property or inherited property from the prototype chain.
 
 - Enumerability refers to whether a property of an object can be listed in a loop that iterates over the properties of that object, such as for...in, Object.keys(), or similar methods.
+- All properties, enumerable or not, string or symbol, own or inherited, can be accessed with dot notation or bracket notation.
 
 ## What is an Enumerable Property?
 - Enumerable properties are those properties whose internal enumerable flag is set to true. So, they are included in a loop or method that iterates over an object's properties. 
@@ -190,7 +191,7 @@ customProperty I'm not an index
 customMethod function() { console.log("I'm a method on the prototype"); }
 ```
 
-## Safe Alternatives
+### Safe Alternatives
 
 ```
 // Safe iteration using a for loop
@@ -206,7 +207,9 @@ arr.forEach((value, index) => {
 
 Or, use a for-of loop, which has the added benefit of also working with other iterable data structures.
 
+# Difference between Object.keys() and for...in loop
 
+Both of them lists enumerable properties, however, Object.keys() only lists 'own properties', and, for...in loop also includes the inherited properties.
 
 
 
