@@ -7,8 +7,9 @@
 The sort() method in JavaScript is used to sort the elements of an array _**in place**_ and returns the sorted array. By default, sort() converts the elements into strings and sorts them in ascending order (based on UTF-16 code unit values). This can lead to unexpected results when sorting numbers unless a custom compare function is provided.
 
 ```
-array.sort([compareFunction])
+array.sort(compareFunction)
 ```
+- compareFunction is optional
 
 ### Without a compareFunction
 
@@ -33,4 +34,9 @@ It should return a number where:
   
 To memorize this, remember that (a, b) => a - b sorts numbers in ascending order.
 
+```
+myArr.sort((a,b)=> {
+        return fn(a) - fn(b);
+    });
+```
 
