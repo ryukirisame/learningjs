@@ -87,3 +87,53 @@ console.log(object1.hasOwnProperty('toString'));
 console.log(object1.hasOwnProperty('hasOwnProperty'));
 // Expected output: false
 ```
+
+# Object.hasOwn()
+
+- Object.hasOwn() is intended as a replacement for Object.prototype.hasOwnProperty().
+- The Object.hasOwn() static method returns true if the specified object has the indicated property as its own property. If the property is inherited, or does not exist, the method returns false.
+
+```
+const object1 = {
+  prop: 'exists',
+};
+
+console.log(Object.hasOwn(object1, 'prop'));
+// Expected output: true
+
+console.log(Object.hasOwn(object1, 'toString'));
+// Expected output: false
+
+console.log(Object.hasOwn(object1, 'undeclaredPropertyValue'));
+// Expected output: false
+```
+
+# Object.create()
+
+The Object.create() static method creates a new object, using an existing object as the prototype of the newly created object.
+
+```
+const person = {
+  isHuman: false,
+  printIntroduction: function () {
+    console.log(`My name is ${this.name}. Am I human? ${this.isHuman}`);
+  },
+};
+
+const me = Object.create(person);
+
+me.name = 'Matthew'; // "name" is a property set on "me", but not on "person"
+me.isHuman = true; // Inherited properties can be overwritten
+
+me.printIntroduction();
+// Expected output: "My name is Matthew. Am I human? true"
+```
+
+# Object.getOwnPropertyNames()
+
+Object.getOwnPropertyNames() is a method in JavaScript that returns an array of all properties (including non-enumerable properties) found directly on a given object. This includes both enumerable and non-enumerable properties but excludes properties inherited through the prototype chain.
+
+```
+const arr=[2,3,4,5];
+console.log(Object.getOwnPropertyNames(arr));  // [ '0', '1', '2', '3', 'length' ]
+```
