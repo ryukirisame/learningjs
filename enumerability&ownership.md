@@ -160,4 +160,57 @@ console.log(person.secret); // "hidden"
 - Inheritance Control: Understanding inherited properties helps in designing objects that extend functionality without polluting the object with unnecessary or irrelevant properties.
 - Efficient Object Design: By managing enumerability and ownership, you can create objects that are efficient and predictable when iterating over properties.
 
+# Why should we not use for...in loop to iterate over an array
+
+Using for...in to iterate over the indices of an array in JavaScript is generally not safe because for...in does not just iterate over the array's indices (like 0, 1, 2, etc.). It also iterates over all enumerable properties, including inherited properties and any other enumerable properties that are not numeric indices.
+
+
+```
+// Example Array
+const arr = [10, 20, 30];
+
+// Adding a non-index property to the array
+arr.customProperty = "I'm not an index";
+
+// Adding a method to the array's prototype
+Array.prototype.customMethod = function() {
+    console.log("I'm a method on the prototype");
+};
+
+// Using for...in to iterate over the array
+for (let key in arr) {
+    console.log(key, arr[key]);
+}
+```
+```
+0 10
+1 20
+2 30
+customProperty I'm not an index
+customMethod function() { console.log("I'm a method on the prototype"); }
+```
+
+## Safe Alternatives
+
+```
+// Safe iteration using a for loop
+for (let i = 0; i < arr.length; i++) {
+    console.log(i, arr[i]);
+}
+
+// Safe iteration using forEach
+arr.forEach((value, index) => {
+    console.log(index, value);
+});
+```
+
+Or, use a for-of loop, which has the added benefit of also working with other iterable data structures.
+
+
+
+
+
+
+
+
 
