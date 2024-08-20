@@ -60,7 +60,7 @@ console.log(person.propertyIsEnumerable('age')); // Output: false
 
 Ownership refers to whether a property belongs directly to the object itself or if it is inherited from the object's prototype chain.
 
-## Own Properties
+### Own Properties
 
 These are properties that are defined directly on the object, not inherited from its prototype.
 
@@ -72,7 +72,7 @@ const person = {
 console.log(person.hasOwnProperty('name')); // true
 ```
 
-## Inherited Properties
+### Inherited Properties
 These are properties that are inherited from an object's prototype chain. They are not directly on the object but can still be accessed as if they were.
 
 ```
@@ -81,4 +81,83 @@ const person = { name: "Alice" };
 console.log(person.toString); // [Function: toString] (inherited from Object.prototype)
 console.log(person.hasOwnProperty('toString')); // false
 ```
+
+## Listing Own Properties Only
+To list only the properties that belong directly to an object (ignoring inherited properties), you can use Object.keys() or Object.getOwnPropertyNames().
+
+# Combining Enumerability and Ownership
+
+## Enumerating own enumerables
+
+### Using for...in Loop
+The for...in loop iterates over all enumerable properties of an object, including those inherited from its prototype chain. However, you can filter out inherited properties using hasOwnProperty.
+```
+const obj = {
+    name: 'Alice',
+    age: 25,
+    city: 'New York'
+};
+
+for (let key in obj) {
+    if (obj.hasOwnProperty(key)) { // Filters out inherited properties
+        console.log(key, obj[key]);
+    }
+}
+```
+
+### Using Object.keys()
+Object.keys() returns an array of the object's own enumerable property names (keys).
+
+```
+const obj = {
+    name: 'Alice',
+    age: 25,
+    city: 'New York'
+};
+
+const keys = Object.keys(obj);
+keys.forEach(key => {
+    console.log(key, obj[key]);
+});
+```
+
+### Using Object.entries()
+Object.entries() returns an array of the object's own enumerable property [key, value] pairs. You can then use forEach to iterate over them.
+
+```
+const obj = {
+    name: 'Alice',
+    age: 25,
+    city: 'New York'
+};
+
+const entries = Object.entries(obj);
+entries.forEach(([key, value]) => {
+    console.log(key, value);
+});
+```
+
+## Enumerating inherited enumerables
+
+These are inherited properties that are enumerable. While Object.keys() does not list them, for...in will.
+
+# Non-Enumerable Own Properties
+Sometimes, you need properties to be non-enumerable but still owned by the object. This is often the case for internal properties or methods that should not be exposed during enumeration:
+```
+const person = {};
+Object.defineProperty(person, 'secret', {
+    value: 'hidden',
+    enumerable: false
+});
+
+console.log(Object.keys(person)); // []
+console.log(person.secret); // "hidden"
+```
+
+# Why all this?
+
+- Hiding Internal Properties: Non-enumerable properties are often used to hide internal details of an object that should not be exposed in a loop or during property inspection.
+- Inheritance Control: Understanding inherited properties helps in designing objects that extend functionality without polluting the object with unnecessary or irrelevant properties.
+- Efficient Object Design: By managing enumerability and ownership, you can create objects that are efficient and predictable when iterating over properties.
+
 
