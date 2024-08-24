@@ -309,9 +309,53 @@ When we do new Dog("Buddy", "Golden Retriever"), the following happens:
 13. All this process becomes equivalent to extending Animal class by the Dog class, if we were to use Classes instead of this constructor function syntax, which looks complicated.
 14. So, whenever we have to setup a multi-level inheritance, we should prefer classes, as it abstracts away the pain of calling the parent constructor function and setting up the prototype chain manually.
 
+### Class Version of the Same Code
 
+```
+// Parent Class
+class Animal {
+  constructor(name) {
+    this.name = name;
+  }
 
+  speak() {
+    console.log(`${this.name} makes a sound.`);
+  }
+}
 
+// Child Class
+class Dog extends Animal {
+  constructor(name, breed) {
+    // Call the parent constructor with `super`
+    super(name);
+    this.breed = breed;
+  }
+
+  // Override speak method in Dog class
+  speak() {
+    console.log(`${this.name} barks.`);
+  }
+
+  // Add additional method specific to Dog
+  fetch() {
+    console.log(`${this.name} is fetching a ball.`);
+  }
+}
+
+// Usage Examples
+const animal = new Animal("Generic Animal");
+animal.speak(); // Output: 'Generic Animal makes a sound.'
+
+const dog = new Dog("Buddy", "Golden Retriever");
+dog.speak(); // Output: 'Buddy barks.'
+dog.fetch(); // Output: 'Buddy is fetching a ball.'
+
+// Checking instanceof
+console.log(dog instanceof Dog);    // Output: true
+console.log(dog instanceof Animal); // Output: true
+console.log(animal instanceof Dog); // Output: false
+console.log(animal instanceof Animal); // Output: true
+```
 
 
 
