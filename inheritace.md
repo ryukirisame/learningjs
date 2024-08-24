@@ -243,3 +243,75 @@ class Derived extends Base {}
 const obj = new Derived();
 // obj ---> Derived.prototype ---> Base.prototype ---> Object.prototype ---> null
 ```
+
+### An Example
+
+```
+// Parent Constructor Function
+function Animal(name) {
+  this.name = name;
+}
+
+Animal.prototype.speak = function () {
+  console.log(`${this.name} makes a sound.`);
+};
+
+// Child Constructor Function
+function Dog(name, breed) {
+  // Inherit the name property from Animal
+  Animal.call(this, name);  // note: we are not using new keyword here, so this call doesn't create a new animal object.
+  this.breed = breed;
+}
+
+// Set up inheritance
+Object.setPrototypeOf(Dog.prototype, Animal.prototype);
+
+// Override speak method in Dog prototype
+Dog.prototype.speak = function () {
+  console.log(`${this.name} barks.`);
+};
+
+// Add additional method to Dog prototype
+Dog.prototype.fetch = function () {
+  console.log(`${this.name} is fetching a ball.`);
+};
+
+// Usage Examples
+const animal = new Animal("Generic Animal");
+animal.speak(); // Output: 'Generic Animal makes a sound.'
+
+const dog = new Dog("Buddy", "Golden Retriever");
+dog.speak(); // Output: 'Buddy barks.'
+dog.fetch(); // Output: 'Buddy is fetching a ball.'
+
+// Checking instanceof
+console.log(dog instanceof Dog); // Output: true
+console.log(dog instanceof Animal); // Output: true
+console.log(animal instanceof Dog); // Output: false
+console.log(animal instanceof Animal); // Output: true
+```
+
+**Explanation**
+
+When we do new Dog("Buddy", "Golden Retriever"), the following happens:
+1. A new plain object is created. 
+2. The [[Prototype]] of the new plain object is set to Dog.prototype object.
+3. Then, the Dog constructor function starts to execute, with "this" referencing to the newly created plain object. 
+4. Now, the first line encountered in Dog() is Animal.call(this, name). So what happens is, the Animal function is invoked with "this" as the context, which means the newly created object as the context.
+5. Notice, that we did not use new keyword infront of Animal.call(), because we are not trying to create a new Animal object here, we are simply trying to inherit the properties of Animal.
+6. The Animal() executes, and the newly created object will have name property set to "Buddy". So now the updated newly created object will be : {name : "Buddy"}.
+7. Then, we come back to Dog() constructor, and the next line adds the "breed" property to the new object. So, now the object becomes: {name: "buddy" , breed: "Golden Retriever"}
+8. Then finally, the new object will be returned and its reference will be stored in the dog variable.
+9. Notice, that we have set the prototype of Dog.prototype to Animal.prototype.
+10. So, the prototype chain becomes: dog -> Dog.prototype -> Animal.prototype 
+11. So, now we have a prototype chain setup. So basically, the dog inherits everything from the two prototypes.
+12. Also, the dog object has all the properties of animal and dog both. which is: name and breed.
+13. All this process becomes equivalent to extending Animal class by the Dog class, if we were to use Classes instead of this constructor function syntax, which looks complicated.
+14. So, whenever we have to setup a multi-level inheritance, we should prefer classes, as it abstracts away the pain of calling the parent constructor function and setting up the prototype chain manually.
+
+
+
+
+
+
+
