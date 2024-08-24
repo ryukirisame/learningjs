@@ -453,6 +453,18 @@ In the example above, the variable a is in the TDZ from the start of the block u
    Reference Error ... while trying to access variable which is not there in global memory.
 9. Syntax error is similar to compile error, while TypeError and Reference Error falls under run time error.
 
+## Class declaration hoisting
+Unlike function declarations, class declarations are not hoisted (or, in some interpretations, hoisted but with the temporal dead zone restriction), which means you cannot use a class before it is declared.
+
+```
+new MyClass(); // ReferenceError: Cannot access 'MyClass' before initialization
+
+class MyClass {}
+
+```
+
+This behavior is similar to variables declared with let and const.
+
 # Implicit Global Variables
 When you assign a value to an identifier that has not been declared using var, let, or const, JavaScript treats it as an implicit global variable. This means the variable is automatically added as a property of the global object (window in browsers and global in Node.js).
 
