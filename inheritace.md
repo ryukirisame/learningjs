@@ -357,5 +357,7 @@ console.log(animal instanceof Dog); // Output: false
 console.log(animal instanceof Animal); // Output: true
 ```
 
+# Checking if an object is an instance of a class (without using instanceof)
+https://leetcode.com/problems/check-if-object-instance-of-class/
 
 
