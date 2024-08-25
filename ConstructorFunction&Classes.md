@@ -289,37 +289,86 @@ console.log(red.red); // 255
 In strict mode, the red.red = 0 line will throw a type error: "Cannot set property red of #<Color> which has only a getter". In non-strict mode, the assignment is silently ignored.
 
 
+## Static Initialization Block
 
+In JavaScript, the static block executes immediately when the class is first parsed, which is during the class definition phase, not necessarily when the class is first referenced or instantiated.
+Static blocks in JavaScript are used to run code that initializes static fields or performs other setup tasks, and they execute as soon as the class definition is processed.
 
-
-
-
-
-
-
-
-
-An example:
 ```
-class Person {
-  // Constructor method
-  constructor(name, age) {
-    this.name = name;
-    this.age = age;
-  }
+class MyClass {
+    // Static block
+    static {
+        console.log('Static block executed');
+    }
 
-  // Method
-  greet() {
-    return `Hello, my name is ${this.name} and I am ${this.age} years old.`;
+    constructor() {
+        console.log('Constructor called');
+    }
+}
+
+console.log('Class defined');
+const instance = new MyClass();
+
+
+// Static block executed
+// Class defined
+// Constructor called
+```
+
+This behavior is different from Java, where the static block is executed the first time the class is referenced. 
+
+- Static initialization blocks are almost equivalent to immediately executing some code after a class has been declared. The only difference is that they have access to static private properties.
+
+
+## Extends & Inheritance
+
+The derived class has access to all **public** properties of the parent class. In JavaScript, derived classes are declared with an 'extends' clause, which indicates the class it extends from.
+
+```
+class ColorWithAlpha extends Color {
+  #alpha;
+  constructor(r, g, b, a) {
+    super(r, g, b);
+    this.#alpha = a;
+  }
+  get alpha() {
+    return this.#alpha;
+  }
+  set alpha(value) {
+    if (value < 0 || value > 1) {
+      throw new RangeError("Alpha value must be between 0 and 1");
+    }
+    this.#alpha = value;
   }
 }
 
-// Creating instances of the Person class
-const person1 = new Person('Alice', 30);
-const person2 = new Person('Bob', 25);
-
-console.log(person1.greet()); // Outputs: Hello, my name is Alice and I am 30 years old.
-console.log(person2.greet()); // Outputs: Hello, my name is Bob and I am 25 years old.
 ```
+
+**Things to notice:**
+
+1. In the constructor, we are calling super(r, g, b). It is a language requirement to call super() before accessing this. The super() call calls the parent class's constructor to initialize this — here it's roughly equivalent to this = new Color(r, g, b). You can have code before super(), but you cannot access this before super() — the language prevents you from accessing the uninitialized this. The language enforces this rule to prevent errors that would occur from trying to interact with an uninitialized object.
+2. After the parent class is done with modifying this, the derived class can do its own logic.
+
+
+Within derived classes, you can access the parent class's methods by using 'super'. This allows you to build enhancement methods and avoid code duplication.
+
+```
+class ColorWithAlpha extends Color {
+  #alpha;
+  // …
+  toString() {
+    // Call the parent class's toString() and build on the return value
+    return `${super.toString()}, ${this.#alpha}`;
+  }
+}
+
+console.log(new ColorWithAlpha(255, 0, 0, 0.5).toString()); // '255, 0, 0, 0.5'
+```
+
+#### A class can only extend from one class. This prevents problems in multiple inheritance like the diamond problem. However, due to the dynamic nature of JavaScript, it's still possible to achieve the effect of multiple inheritance through class composition and mixins.
+
+
+
+
 
 
