@@ -200,7 +200,93 @@ class Example {
 
 ```
 
+- Accessing private fields outside the class is an early syntax error. The language can guard against this because #privateField is a special syntax, so it can do some static analysis and find all usage of private fields before even evaluating the code.
+```
+console.log(red.#values); // SyntaxError: Private field '#values' must be declared in an enclosing class
+```
 
+**Note:** Code run in the Chrome console can access private properties outside the class. This is a DevTools-only relaxation of the JavaScript syntax restriction.
+
+- A class method can read the private fields of other instances, as long as they belong to the same class.
+```
+class Color {
+  #values;
+  constructor(r, g, b) {
+    this.#values = [r, g, b];
+  }
+  redDifference(anotherColor) {
+    // #values doesn't necessarily need to be accessed from this:
+    // you can access private fields of other instances belonging
+    // to the same class.
+    return this.#values[0] - anotherColor.#values[0];
+  }
+}
+
+const red = new Color(255, 0, 0);
+const crimson = new Color(220, 20, 60);
+red.redDifference(crimson); // 35
+
+```
+
+- Accessing a nonexistent private property throws an error instead of returning undefined like normal properties do. If you don't know if a private field exists on an object and you wish to access it without using try/catch to handle the error, you can use the in operator.
+
+```
+class Color {
+  #values;
+  constructor(r, g, b) {
+    this.#values = [r, g, b];
+  }
+  redDifference(anotherColor) {
+    if (!(#values in anotherColor)) {
+      throw new TypeError("Color instance expected");
+    }
+    return this.#values[0] - anotherColor.#values[0];
+  }
+}
+```
+**Note**: Keep in mind that the # is a special identifier syntax, and you can't use the field name as if it's a string. "#values" in anotherColor would look for a property name literally called "#values", instead of a private field.
+
+
+## Accessor Fields (Getters & Setters)
+
+- Accessor fields allow us to manipulate something as if it is an "actual property".
+```
+class Color {
+  constructor(r, g, b) {
+    this.values = [r, g, b];
+  }
+  get red() {
+    return this.values[0];
+  }
+  set red(value) {
+    this.values[0] = value;
+  }
+}
+
+const red = new Color(255, 0, 0);
+red.red = 0;
+console.log(red.red); // 0
+```
+It looks as if the object has a property called red — but actually, no such property exists on the instance! There are only two methods, but they are prefixed with get and set, which allows them to be manipulated as if they were properties.
+
+- If a field only has a getter but no setter, it will be effectively read-only.
+
+```
+class Color {
+  constructor(r, g, b) {
+    this.values = [r, g, b];
+  }
+  get red() {
+    return this.values[0];
+  }
+}
+
+const red = new Color(255, 0, 0);
+red.red = 0;
+console.log(red.red); // 255
+```
+
+In strict mode, the red.red = 0 line will throw a type error: "Cannot set property red of #<Color> which has only a getter". In non-strict mode, the assignment is silently ignored.
 
 
 
