@@ -1,4 +1,5 @@
 
+
 # [2724. Sort By](https://leetcode.com/problems/sort-by/description/?envType=study-plan-v2&envId=30-days-of-javascript)
 
 ## Array.prototype.sort()
@@ -163,21 +164,87 @@ console.log(array1.findIndex(isLargeNumber));
 
 The valueOf() method is used to return the primitive value of an object. It is a built-in method available on various data types and objects and can be used to convert an object to its primitive representation.
 
+## Basic Usage
+### For Primitive Types
 
+#### Numbers
 
+```
+const num = 123;
+console.log(num.valueOf()); // Output: 123
+```
 
+#### Booleans
+```
+const bool = true;
+console.log(bool.valueOf()); // Output: true
+```
 
+#### Strings
+```
+const str = 'Hello';
+console.log(str.valueOf()); // Output: 'Hello'
+```
 
+### For Objects
+The valueOf() method on objects usually returns the object itself. It is often overridden in custom objects to return a meaningful primitive value.
 
+```
+class Person {
+  constructor(name, age) {
+    this.name = name;
+    this.age = age;
+  }
 
+  valueOf() {
+    return `${this.name}, ${this.age}`;
+  }
+}
 
+const person = new Person('Alice', 30);
+console.log(person.valueOf()); // Output: 'Alice, 30'
+```
 
+### For Arrays
+The valueOf() method for arrays returns the array itself, but it is not commonly used for primitive conversion.
+```
+const arr = [1, 2, 3];
+console.log(arr.valueOf()); // Output: [1, 2, 3]
+```
 
+### For Date Objects
+The valueOf() method for Date objects returns the number of milliseconds since the Unix epoch (January 1, 1970).
+```
+const date = new Date();
+console.log(date.valueOf()); // Output: Number of milliseconds since January 1, 1970
+```
 
+## Comparison with toString()
+- toString(): Returns a string representation of the object. It is often used for string concatenation and logging.
+- valueOf(): Returns the primitive value of the object. It is used in contexts where JavaScript needs a primitive value, such as arithmetic operations.
 
+### Usage in Type Conversion
+JavaScript uses valueOf() and toString() methods for type conversions. When an object needs to be converted to a primitive value (e.g., during arithmetic operations), JavaScript will call valueOf() first and, if needed, fall back to toString().
 
+```
+class CustomNumber {
+  constructor(value) {
+    this.value = value;
+  }
 
+  valueOf() {
+    return this.value;
+  }
 
+  toString() {
+    return `Number: ${this.value}`;
+  }
+}
+
+const customNum = new CustomNumber(42);
+console.log(customNum + 8); // Output: 50 (uses valueOf)
+console.log(String(customNum)); // Output: 'Number: 42' (uses toString)
+```
 
 
 
