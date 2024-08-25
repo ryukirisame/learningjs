@@ -159,7 +159,9 @@ console.log(array1.findIndex(isLargeNumber));
 ```
 
 
+# Object.prototype.valueOf()
 
+The valueOf() method is used to return the primitive value of an object. It is a built-in method available on various data types and objects and can be used to convert an object to its primitive representation.
 
 
 
