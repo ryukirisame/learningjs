@@ -128,6 +128,88 @@ console.log(new MyClass().myField); // undefined
 
 ```
 
+## Instance Methods
+
+If you define a function inside the constructor, like this:
+```
+class Color {
+  constructor(r, g, b) {
+    this.values = [r, g, b];
+    this.getRed = function () {
+      return this.values[0];
+    };
+  }
+}
+
+```
+Here, every time you create a new Color instance, a new getRed function is created. This means that each Color object has its own copy of the getRed function, even though they all do the same thing.
+```
+console.log(new Color().getRed === new Color().getRed); // false
+```
+
+In contrast, if you use a method, it will be shared between all instances.
+```
+class Color {
+  constructor(r, g, b) {
+    this.values = [r, g, b];
+  }
+
+  getRed() {
+    return this.values[0];
+  }
+}
+```
+The getRed function is only created once and is shared by all instances of Color. This is because methods are stored on the Color.prototype, not on each individual instance.
+
+- A function can be shared between all instances, but still have its behavior differ when different instances call it, because the value of 'this' is different. 
+
+
+## Private Fields
+
+- There is a philosophy in object-oriented programming called "encapsulation". This means you should not access the underlying implementation of an object, but instead use well-abstracted methods to interact with it.
+- Private properties are created by prefixing the property name with a ```#``` symbol.
+- The # symbol is part of the private property's name, so it ensures that a private property will never conflict with a public property, even if they have similar names.
+```
+class Example {
+  #name = 'Private Name';  // Private property
+  name = 'Public Name';    // Public property
+
+  getName() {
+    return this.#name; // Accessing the private property
+  }
+}
+
+const instance = new Example();
+
+console.log(instance.name);       // Output: 'Public Name'
+console.log(instance.getName());  // Output: 'Private Name'
+```
+- You need to declare a private field with # in the class body before you can use it in any methods within that class.
+```
+class Example {
+  #privateField; // Declare the private field in the class body
+
+  constructor(value) {
+    this.#privateField = value; // Now you can use it in the class
+  }
+
+  getPrivateField() {
+    return this.#privateField; // Accessing the private field
+  }
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
 
 
 
