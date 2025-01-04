@@ -386,3 +386,78 @@ Promise.any([promise1, promise2, promise3])
 # Bonus
 Build your own Promise
 https://levelup.gitconnected.com/understand-javascript-promises-by-building-a-promise-from-scratch-84c0fd855720
+
+# Converting callbacks to promises
+
+### **1. Callbacks Indicate Asynchronous Behavior (But Not Always)**
+- In general, **when a function takes a callback as an argument**, it often suggests asynchronous behavior.  
+- Example – `osUtils.cpuUsage`:
+   ```javascript
+   osUtils.cpuUsage((value) => {
+     console.log("CPU Usage:", value);
+   });
+   ```
+   - This is async because the callback is executed once the CPU usage is calculated (after a delay).  
+   - Functions like `setTimeout`, `fs.readFile`, and API requests typically follow this pattern.
+
+---
+
+### **2. Not All Callback Functions Are Asynchronous**
+- Some functions accept callbacks but are actually **synchronous**.  
+- Example – `Array.prototype.map`:
+   ```javascript
+   const result = [1, 2, 3].map((num) => num * 2);
+   ```
+   - `map` executes immediately and **returns synchronously**.  
+   - The callback (`num * 2`) is synchronous for each element in the array.
+
+---
+
+### **3. How to Identify Async Callbacks**:
+- Callbacks often indicate **async operations** when:
+   - You interact with **I/O operations** (reading files, network requests).  
+   - There’s **delayed execution** (like `setTimeout`).  
+   - The callback executes **at a later point in time**.  
+
+---
+
+### **4. Converting Callback-Based Functions to Promises (Async/Await)**:
+- Yes, **you can convert async callback-based functions to Promises** for better readability and error handling.  
+- Example – Convert `cpuUsage` to a Promise:  
+   ```javascript
+   function getCpuUsage() {
+     return new Promise((resolve, reject) => {
+       osUtils.cpuUsage((value) => {
+         resolve(value);
+       });
+     });
+   }
+   
+   getCpuUsage().then((usage) => {
+     console.log("CPU Usage:", usage);
+   });
+   ```
+   - This wraps the callback in a Promise. Now, it can be used with **`.then`** or **async/await**.
+
+---
+
+### **5. Using Async/Await**:
+   ```javascript
+   async function checkCpu() {
+     const usage = await getCpuUsage();
+     console.log("CPU Usage:", usage);
+   }
+   
+   checkCpu();
+   ```
+
+---
+
+### **Summary (Key Points):**
+- Callbacks **often** signal async functions, but **not always**.  
+- If a function **returns immediately**, the callback is synchronous.  
+- To confirm async behavior:
+   - Look for **I/O operations** or **delays**.  
+   - Check the **documentation** of the function.  
+- You can **convert async callbacks to Promises** to use async/await for cleaner code.
+
