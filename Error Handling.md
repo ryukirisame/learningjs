@@ -197,6 +197,27 @@ try {
 - **Throwing Errors:** Use when something unexpected happens and you need to **force the caller to handle the situation**.
 - **Returning Null/Undefined:** Use when the absence of a result is expected and should not interrupt the program flow.
 
+## When to Throw vs. When to log
+
+The general best practice is to **log the full** `Error` object, including the stack trace, for debugging purposes, while **throwing a more concise and meaningful error message** (optionally including the cause). This approach ensures that:
+
+1. Detailed Debugging Information:
+  - The full Error object, including the stack trace, is logged for developers to debug the issue effectively.
+  - This is especially useful in production environments where logs are the primary source of debugging information.
+2. User-Friendly Error Messages:
+  - The error message thrown to the calling code (or propagated to the user) is concise and meaningful, without exposing unnecessary technical details like stack traces or internal implementation details.
+3. Separation of Concerns:
+  - Logging is primarily for developers, while the thrown error message is for the calling code or end-users. This separation ensures that logs remain detailed while error messages remain user-friendly.
+
+
+### Why This Approach Works
+1. For Developers:
+  - The full error object in the logs provides all the necessary details (e.g., stack trace, error type) to debug the issue.
+2. For Calling Code:
+  - The concise error message makes it easier for the calling code to handle the error without being overwhelmed by unnecessary details.
+3. For End-Users:
+- If the error message is eventually displayed to the user, it remains meaningful and user-friendly, without exposing internal implementation details.
+
 
 
 
