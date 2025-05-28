@@ -11,7 +11,7 @@ Debouncing is a technique where a function call is delayed until after a specifi
 
 Here's a basic implementation of a debouncing function in JavaScript:
 
-```
+```js
 function debounce(func, delay) {
     let timerId;
     
@@ -38,7 +38,7 @@ function debounce(func, delay) {
 
 Let's say you have a function saveData that you want to debounce to improve performance:
 
-```
+```js
 function saveData() {
     // Code to save data to the server
     console.log('Data saved');
@@ -69,7 +69,7 @@ Throttling limits the execution of a function to once per specified time interva
 
 One implementation of throttling can be:
 
-```
+```js
 function throttle(fn, delay) {
   let lastExecutedTime = 0;
 
@@ -92,7 +92,7 @@ function throttle(fn, delay) {
 ```
 
 ### Implementing throttling using setTimeout
-```
+```js
 function callAPI(a, b) {
   console.log(a, b);
 
