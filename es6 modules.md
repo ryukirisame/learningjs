@@ -5,7 +5,7 @@
 
 ###  Key Features
 
-#### Exporting:
+#### Exporting
 
 ```js
 // math.js
@@ -13,7 +13,7 @@ export const add = (a, b) => a + b;
 export const multiply = (a, b) => a * b;
 ```
 
-#### Importing:
+#### Importing
 
 ```js
 // main.js
@@ -21,7 +21,7 @@ import { add, multiply } from './math.js';
 console.log(add(2, 3)); // 5
 ```
 
-#### Default export:
+#### Default export
 
 ```js
 // logger.js
@@ -92,7 +92,7 @@ console.log(add(2, 3)); // 5
 
 ---
 
-### ❗ Caution:
+###  Caution:
 
 If you're serving files locally with `file://`, browser modules might not work due to CORS restrictions. Use a local server (like `vite`, `http-server`, `live-server`, etc.).
 
