@@ -3,7 +3,7 @@
 **ES6 modules** (also called **ECMAScript modules** or **ESM**) are the official, standardized way to **import and export JavaScript code** between files. They were introduced in **ECMAScript 2015 (ES6)**.
 
 
-### 🧩 Key Features
+###  Key Features
 
 #### Exporting:
 
@@ -148,7 +148,7 @@ import('./math.js').then((mod) => {
 ```
 
 
-#### ✅ Use Cases:
+### 3. Use Cases
 
 | Use Case                | Example                                          |
 | ----------------------- | ------------------------------------------------ |
