@@ -30,7 +30,7 @@ Then in the execution phase actually assigns the variables values and actually e
 
 ### Example Code
 Let’s take a look at a quick example to see how this works.
-```
+```js
 function helloWorld (world) {  
   var foo = 'foo'  
   const bar = 'bar'  
@@ -55,7 +55,7 @@ helloWorld('earth')
 Here’s a visual representation that can help us understand how the function execution looks like in the creation phase, and in the execution phase.
 First, in the creation phase:
 
-```
+```js
 FuntionExecutionContext = {  
   foo: undefined,bar: < uninitialized >,  
   fooBar: < uninitialized >,  
@@ -65,7 +65,7 @@ FuntionExecutionContext = {
 
 Then, in the execution phase:
 
-```
+```js
 FuntionExecutionContext = {  
    foo: 'foo',bar: 'bar',  
    fooBar: 'fooBar',  Arguments: {0: 'world', length: 1}
@@ -77,7 +77,7 @@ FuntionExecutionContext = {
 Technically, an execution context contains the following things:
 
 
-```
+```js
 ExecutionContext = {  
   ThisBinding: <this value>,  
   VariableEnvironment: { ... },  
@@ -107,7 +107,7 @@ There are 2 types of Environment Records:
 2.	Object Environment Record - Its job is to store declarations of variables and functions that are in the global scope.
 
 Let’s take the following code example:
-```
+```js
 var x = 10;  
 function foo(a) {  
 var y = 20;  
@@ -117,7 +117,7 @@ foo('hello');
 
 Here we have two environments, one is the global one and the other one is a function one (‘foo’). So how would that be represented theoretically behind the scenes?
 
-```
+```js
 // environment of the global context  
 globalEnvironment = {  
 environmentRecord: {  
@@ -177,7 +177,7 @@ In JavaScript, a closure is a powerful feature that allows a function to access 
 
 In JavaScript, the lexical environment of a function is generally destroyed once the function has finished executing, except when there are closures involved. When a function creates a closure, it means that some inner function retains a reference to variables defined in the outer function. This prevents the lexical environment from being garbage-collected, because it’s still in use.
 
-```
+```js
 function outerFunction() {
     var outerVar = 'I am outer';
 
@@ -219,7 +219,7 @@ https://medium.com/deno-the-complete-reference/10-use-cases-of-closures-in-javas
 **Problem Statement**: I want to write a code that prints 1,2,3,4,5 with 1 second interval. We are not supposed to use setInterval, but use setTimeout.
 
 Let's try a solution:
-```
+```js
 (function x()
 {
     for(var i=1;i<6;i++)
@@ -231,7 +231,7 @@ Let's try a solution:
 
 In this solution, we are setting up 5 setTimeout in a loop. 
 However, the output will be:
-```
+```js
 6 
 6 
 6 
@@ -242,7 +242,7 @@ However, the output will be:
 This solution didn't work. The issue with our code lies in the scoping of the variable i when using var. Since var is function-scoped, the same i variable is shared across all iterations of the loop. By the time the setTimeout callbacks are executed, the loop has already completed and i is equal to 6 for all the callbacks, resulting in the output 6 being printed five times.
 
 To fix this, you can use let instead of var to take advantage of block scoping. This ensures that each iteration of the loop has its own i variable with the correct value. Here’s the corrected code:
-```
+```js
 function x() {
   for (let i = 1; i < 6; i++) {
     setTimeout(() => console.log(i), i * 1000);
@@ -259,7 +259,7 @@ When using let inside the for loop, a new binding of i is created for each itera
 
 Another way to solve this problem is by using closures to capture the value of i:
 
-```
+```js
 function x() {
   for (var i = 1; i < 6; i++) {
     (function(i) {
@@ -279,18 +279,18 @@ In this alternative solution:
 - "this substitution" refers to the concept of how the 'this' keyword's value is determined or "substituted" in various contexts in JavaScript.
 - The value of 'this' is determined by the execution context in which a function is called. Here are the primary rules for determining this binding:
 1.	Global Context: When 'this' is referenced in the global execution context (outside of any function), it refers to the global object. (which is window in browsers and global in Node.js).
-```
+```js
 console.log(this); // In a browser, this logs the `window` object
 ```
 2.	Function Context: When a regular function is called, this refers to the global object in non-strict mode and undefined in strict mode.
-```
+```js
 function myFunction() {
     console.log(this);
 }
 myFunction(); // In non-strict mode, logs `window`. In strict mode, logs `undefined`.
 ```
 3.	Method Context: When a function is called as a method of an object, this refers to the object that the method is called on.
-```
+```js
 const obj = {
     value: 42,
     myMethod: function() {
@@ -299,14 +299,14 @@ const obj = {
 };
 obj.myMethod(); // Logs 42
 ```
-```
+```js
 function myFunction() {
     console.log(this);
 }
 window.myFunction(); // Will print window object 
 ```
 4.	Constructor Context: When a function is used as a constructor (with the new keyword), this refers to the newly created object.
-```
+```js
 function MyConstructor() {
     this.value = 42;
 }
@@ -316,7 +316,7 @@ console.log(instance.value); // Logs 42
 
 5. Event Handlers:
 In DOM event handlers, this usually refers to the element that received the event.
-```
+```js
 document.querySelector('button').addEventListener('click', function() {
   console.log(this); // Logs the button element
 });
@@ -325,7 +325,7 @@ document.querySelector('button').addEventListener('click', function() {
 6. Arrow Functions:
 Arrow functions are unique because they don't have their own 'this' binding. Instead, they inherit 'this' from the surrounding lexical context—the scope in which they were defined. This behavior makes arrow functions particularly useful in scenarios where you want to maintain the 'this' value from the outer scope, such as in callback functions or event handlers.
 
-```
+```js
 const obj = {
     value: 42,
     myMethod: () => {
@@ -335,7 +335,7 @@ const obj = {
 obj.myMethod();
 ```
 
-```
+```js
 const obj = {
     value: 42,
     myMethod: function() {
@@ -349,7 +349,7 @@ obj.myMethod();
 ```
 
 Additional Use Case:
-```
+```js
 function Timer() {
     this.seconds = 0;
     setInterval(() => {
@@ -375,7 +375,7 @@ It's important to differentiate between function declarations and function expre
 
 ### Function Declarations
 A function declaration defines a named function and the entire definition is hoisted to the top of its scope.
-```
+```js
 console.log(myFunction()); // "Hello from myFunction!"
 
 function myFunction() {
@@ -386,7 +386,7 @@ function myFunction() {
 ### Function Expressions
 Function expressions, including those defined using the function keyword and arrow functions, are not hoisted in the same way as function declarations. Only the variable declaration is hoisted, not the function definition.
 Example with a function expression:
-```
+```js
 console.log(myFunction); // undefined
 console.log(myFunction()); // TypeError: myFunction is not a function
 
@@ -399,7 +399,7 @@ var myFunction = function() {
 Arrow functions, which are also function expressions, behave the same way as regular function expressions in terms of hoisting.
 Example with an arrow function:
 
-```
+```js
 console.log(myArrowFunction); // undefined
 console.log(myArrowFunction()); // TypeError: myArrowFunction is not a function
 
@@ -414,7 +414,7 @@ In the case of functions, the entire function code is stored for the function na
 ## var in Block Statements
 When you declare a variable using var inside a block statement (like an if statement, loop, or any {} block), it is not confined to that block. Instead, it is hoisted to the top of the nearest function or global scope. This leads to the variable being accessible outside the block where it was defined.
 
-```
+```js
 if (true) {
   var x = 10;
 }
@@ -432,7 +432,7 @@ The Temporal Dead Zone (TDZ) is a behavior in JavaScript that affects variables 
 
 **End of TDZ**: The TDZ ends when the variable is initialized, i.e., when the execution reaches the line where the variable is declared and assigned a value.
 
-```
+```js
 console.log(a); // ReferenceError: Cannot access 'a' before initialization
 let a = 3;
 console.log(a); // 3
@@ -456,7 +456,7 @@ In the example above, the variable a is in the TDZ from the start of the block u
 ## Class declaration hoisting
 Unlike function declarations, class declarations are not hoisted (or, in some interpretations, hoisted but with the temporal dead zone restriction), which means you cannot use a class before it is declared.
 
-```
+```js
 new MyClass(); // ReferenceError: Cannot access 'MyClass' before initialization
 
 class MyClass {}
