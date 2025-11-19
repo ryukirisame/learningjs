@@ -144,14 +144,14 @@ globalEnvironment = {
   
 // environment of the "foo" function  
 fooEnvironment = {  
-environmentRecord: {  
-// type  
-type: "DeclarativeEnvironmentRecord",  
-// our bindings:  
-y: 20,  
-arguments: {0: 'hello', length: 1},  
-},  
-outer: globalEnvironment  
+  environmentRecord: {  
+    // type  
+    type: "DeclarativeEnvironmentRecord",  
+    // our bindings:  
+    y: 20,  
+    arguments: {0: 'hello', length: 1},  
+  },  
+  outer: globalEnvironment  
 };  
 ```
 
