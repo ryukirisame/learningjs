@@ -10,9 +10,9 @@ In JavaScript, the global object is an object that is accessible from anywhere i
 The execution context represents the environment in which our code runs.
 
 you can have 3 different types of execution contexts:
--	Global Execution Context – Every code that’s not within a function, is in the global environment. There can only be one global environment, and a global environment also contains a global object (window in the browser) and the value of this in non strict mode is equal to the global environment.
+-	Global Execution Context – This is the default context where JavaScript code starts executing. There's only one global execution context per program, and it creates the global object (window in browsers, global in Node.js) and sets up the 'this' keyword (in non-strict mode) to reference the global object.
 -	Function Execution Context – Every time a function is executed, a new execution context is created for that function. So every function has an execution context of its own which is created when the code is calling the function, and not before.
--	Eval Execution Context – This is created when an eval function is called.
+-	Eval Execution Context – This is created when an eval function is called (rarely used and generally discouraged).
 
 # Execution Stack
 
@@ -57,7 +57,8 @@ First, in the creation phase:
 
 ```js
 FuntionExecutionContext = {  
-  foo: undefined,bar: < uninitialized >,  
+  foo: undefined,
+  bar: < uninitialized >,  
   fooBar: < uninitialized >,  
   Arguments: {0: 'world', length: 1},  
 }  
@@ -87,6 +88,12 @@ ExecutionContext = {
 ```
 All of these things are created during the creation phase, and each serves a different role
 
+# Variable Environment
+Stores variable and function declarations, function parameters, and the arguments object.
+
+# ThisBinding
+Determines the value of the this keyword in the current context.
+
 # Lexical Environment
 
 A lexical environment is essentially a structure that defines the association between identifiers, to specific variables and functions for a particular scope. a kind of map between variable and function names and their values.
@@ -97,7 +104,7 @@ The identifier is x, and it has binding to the value 10.
 ## Lexical Environment Structure
 A lexical environment has 2 parts:
 1.	Environment Record
-2.	Reference to the our environment
+2.	Reference to the outer environment
 
 ### Environment Record
 The precise definition is that an environment record holds the identifier bindings which were created in the scope of the lexical environment. So basically, it holds the function’s local variables, arguments, and inner function declarations.
@@ -120,19 +127,19 @@ Here we have two environments, one is the global one and the other one is a func
 ```js
 // environment of the global context  
 globalEnvironment = {  
-environmentRecord: {  
-// type  
-type: "ObjectEnvironmentRecord",  
-// built-ins:  
-Object: function,  
-Array: function,  
-// etc ...  
-  
-// our bindings:  
-x: 10  
-foo: <function ref>  
-},  
-outer: null // no parent environment  
+  environmentRecord: {  
+    // type  
+    type: "ObjectEnvironmentRecord",  
+    // built-ins:  
+    Object: function,  
+    Array: function,  
+    // etc ...  
+      
+    // our bindings:  
+    x: 10  
+    foo: <function ref>  
+  },  
+  outer: null // no parent environment  
 };  
   
 // environment of the "foo" function  
