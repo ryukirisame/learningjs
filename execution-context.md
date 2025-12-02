@@ -100,4 +100,285 @@ function test() {
 - All var go to Variable Environment(which is function scoped), so even if the block ends, the var variable is accessible.
 
 # Environment Record
+## What is an Environment Record?
+- An Environment Record is the actual storage mechanism inside a Lexical Environment. It's where JavaScript keeps track of all the identifiers (variable names, function names) and their values.
+- Simple Analogy: If the Lexical Environment is a "room", then the Environment Record is the "filing cabinet" inside that room where all documents (variables) are stored.
+
+## Types of environment record
+1. Declarative Environment Record (DER)
+2. Object Environment Record (OER)
+3. Function Environment Record (FER)
+4. Global Environment Record (GER)
+5. Module Environment Record (MER)
+
+
+# Declarative Environment Record (DER)
+This is the most common, most fundamental ER.
+
+
+Used for:
+
+- `let` and `const`
+- block scopes `{ }`
+- function ke andar block scopes (for `let/const`)
+- catch clauses (`catch(e)`)
+- `class` declarations
+- parameters (inside functions)
+- `var` inside functions?
+    - YES, because function Variable Environment uses DER too.
+
+- DER is used whenever a variable/identifier does NOT map onto an object property.
+- It holds bindings in an internal spec-defined structure — NOT on an object.
+
+## Example of DER inside a block
+
+```js
+// Block scope creates Declarative Environment Record
+{
+    let blockVar = 'I am block scoped';
+    const blockConst = 42;
+    
+    console.log('Inside block:');
+    console.log('  blockVar:', blockVar);
+    console.log('  blockConst:', blockConst);
+}
+
+console.log('Outside block:');
+console.log('  blockVar exists?', typeof blockVar);
+console.log('  blockConst exists?', typeof blockConst);
+```
+Output:
+```js
+Inside block:
+  blockVar: I am block scoped
+  blockConst: 42
+
+Outside block:
+  blockVar exists? undefined
+  blockConst exists? undefined
+```
+```
+Declarative Environment Record Structure
+
+Block Scope's Lexical Environment:
+├─ Environment Record: Declarative
+│  ├─ blockVar: "I am block scoped"
+│  └─ blockConst: 42
+│
+└─ Outer Reference: → Parent Scope
+
+Key Point: These variables are NOT accessible outside the block
+because the Declarative Record is destroyed when block exits.
+```
+
+## Example of DER inside a function
+Let's suppose we have a function
+```js
+function test(a, b) {
+    let c = 10;
+    const d = 20;
+}
+```
+This function's lexical environment would look like this:
+```
+Function Lexical Environment (Declarative ER):
+    c: 10
+    d: 20
+    function declarations
+    parameters -> handled by Function ER (we'll see later)
+
+```
+We will come back to this example when we reach Function Environment Record, which extends the DER.
+
+## Environment Record of Variable Environment inside a function execution context 
+
+```js
+function x() {
+    var p = 1;
+}
+```
+The function execution context's variable environment is of type Declarative ER. 
+```
+Function Variable Environment (Declarative ER):
+    p: 1
+```
+
+### NOTE: Declarative Environment Record doesn't support TDZ. 
+
+# Function Environment Record (FER)
+
+A Function Environment Record is an Environment Record specifically created for a function execution context.
+
+It contains:
+1. Parameters
+2. Function name binding (for named function expressions)
+3. `arguments` object
+4. Lexical scoping for closures
+5. `this` binding resolution
+
+### WHEN is a Function Environment Record created?
+
+Whenever a function call begins, before running its body:
+```js
+let foo = function example(a, b) {
+    let x = 10;
+    var y = 20;
+}
+foo(5, 6);
+```
+#### The engine:
+
+1. Creates a new Function Execution Context (FEC)
+2. Inside that, creates a Function Environment Record (FER)
+3. Inside the FER, it allocates:
+    - parameter bindings → `a = 5`, `b = 6`
+    - function name → `example` (only in case of named function expression)
+    - `arguments` object
+    - `super` (if class/derived)
+    - `this` binding
+
+4. Then, the function’s LE and VE are created on top of that.
+
+```
+Function Environment Record (FER)
+|
+|-- Parameter Bindings
+|       a: 5
+|       b: 6
+|
+|-- Function name binding
+|       example: <function>   (ONLY for named function expressions/declarations)
+|
+|-- arguments object
+|       arguments: {0:5, 1:6, length:2}
+|
+|-- ThisBinding
+|       this: <value>
+|
+|-- [[OuterEnv]]
+|       → parent lexical environment
+
+```
+
+### Remember earlier we said:
+
+- function LE uses declarative ER
+- function VE uses declarative ER
+
+That's still true — but internally, the Lexical Environment for the function uses a Function Environment Record, which extends Declarative ER behavior with function-specific bindings.
+
+## Example - Parameters in FER 
+```js
+function foo(a, b) {
+    console.log(a, b);
+}
+foo(10, 20);
+```
+
+```
+FER:
+   a: 10
+   b: 20
+   arguments: {0:10, 1:20, length:2}
+   this: <value>
+   outer → global LE
+```
+
+## EXAMPLE — Function name binding (named functions)
+```js
+let x = function bar() {
+    console.log(bar); // bar exists here
+};
+console.log(bar); // ReferenceError
+```
+Inside the function body, FER contains:
+```
+FER:
+   bar: <function>   // function name binding
+```
+But outside, `bar` does not exist.
+
+## EXAMPLE — Closures (stores outer environment)
+
+```js
+function outer() {
+    let x = 10;
+
+    return function inner() {
+        console.log(x); // closure
+    };
+}
+const fn = outer();
+fn();
+```
+FER for inner() contains:
+```
+[[OuterEnv]] → outer()'s Lexical Environment (DER)
+```
+This is how closures work.
+
+## EXAMPLE — Arguments object differences
+
+FER creates two types of arguments:
+
+1. Mapped arguments object (non-strict mode)
+    - `arguments[i]` mirrors parameter variables
+
+2. Unmapped arguments object (strict mode)
+    - No linkage between parameters and `arguments`
+
+```js
+function test(a) {
+    a = 99;
+    console.log(arguments[0]); // 99 (non-strict)
+}
+```
+Strict Mode:
+```
+"use strict";
+function test(a) {
+    a = 99;
+    console.log(arguments[0]); // still original argument
+}
+```
+
+## Summary
+When we call a function, a Function Execution Context (FEC) is created. It contains:
+1. Lexical Environment (LE)
+2. Variable Environment (VE)
+3. This Binding
+
+
+Both LE and VE contain:
+1. Environment Record
+2. Outer (Reference to parent Lexical Environment)
+
+### Function LE
+The function Lexical Environment uses a Function Environment Record, which is basically an extension of DER. So basically,
+```
+FunctionEnvironmentRecord = DER + parameters + arguments + function name + super + this binding logic
+```
+The FER simply adds extra fields on top of DER.
+
+### Function VE
+The function variable environment uses the normal declarative environment record as its environment record.
+
+
+### Final Model
+```
+FunctionExecutionContext:
+
+   LexicalEnvironment:
+        EnvironmentRecord → FunctionEnvironmentRecord (FER)
+        Outer → parent LE
+
+   VariableEnvironment:
+        EnvironmentRecord → DeclarativeEnvironmentRecord (DER)
+        Outer → parent LE
+
+   ThisBinding:
+        <value>
+```
+
+
 
