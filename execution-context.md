@@ -86,7 +86,7 @@ function test() {
 - The lexical environment of the block containing variable `x` is created during the execution phase of the function and only when the execution reaches the block.
 
 ### So basically,
-- Lexical Environments are created lazily
+- Lexical Environments are created lazily.
 - Only when execution reaches the block.
 - This applies to:
     - if () { ... }
@@ -95,6 +95,9 @@ function test() {
     - try/catch
     - Standalone { } blocks
 - Always at runtime, not at function creation time.
+- Once the block lexical environment gets created then only the execution of the block continues.
+- and destroyed when execution leaves the block.
+- All var go to Variable Environment(which is function scoped), so even if the block ends, the var variable is accessible.
 
-
+# Environment Record
 
