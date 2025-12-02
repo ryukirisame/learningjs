@@ -101,7 +101,7 @@ function test() {
 
 # Environment Record
 ## What is an Environment Record?
-- An Environment Record is the actual storage mechanism inside a Lexical Environment. It's where JavaScript keeps track of all the identifiers (variable names, function names) and their values.
+- An Environment Record is the actual storage mechanism inside a Lexical/Variable Environment. It's where JavaScript keeps track of all the identifiers (variable names, function names) and their values.
 - Simple Analogy: If the Lexical Environment is a "room", then the Environment Record is the "filing cabinet" inside that room where all documents (variables) are stored.
 
 ## Types of environment record
@@ -207,7 +207,7 @@ Function Variable Environment (Declarative ER):
 
 # Function Environment Record (FER)
 
-A Function Environment Record is an Environment Record specifically created for a function execution context.
+A Function Environment Record is an Environment Record specifically created for a function execution context (its lexical environment).
 
 It contains:
 1. Parameters
@@ -231,7 +231,7 @@ foo(5, 6);
 
 1. Creates a new Function Execution Context (FEC)
 2. Inside that, creates a Function Environment Record (FER)
-3. Inside the FER, it allocates:
+3. Inside the FER, it allocates function specific bindings:
     - parameter bindings → `a = 5`, `b = 6`
     - function name → `example` (only in case of named function expression)
     - `arguments` object
