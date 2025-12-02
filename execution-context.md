@@ -223,6 +223,7 @@ Whenever a function call begins, before running its body:
 let foo = function example(a, b) {
     let x = 10;
     var y = 20;
+    console.log(foo.name); // example
 }
 foo(5, 6);
 ```
@@ -262,10 +263,11 @@ Function Environment Record (FER)
 
 ### Remember earlier we said:
 
-- function LE uses declarative ER
-- function VE uses declarative ER
+- Function LE uses declarative ER
+- Function VE uses declarative ER
 
-That's still true — but internally, the Lexical Environment for the function uses a Function Environment Record, which extends Declarative ER behavior with function-specific bindings.
+That's still true — the Lexical Environment for the function uses a Function Environment Record, which extends Declarative ER with function-specific bindings.
+So basically, `FER = DER + function specific bindings`
 
 ## Example - Parameters in FER 
 ```js
@@ -334,7 +336,7 @@ function test(a) {
 }
 ```
 Strict Mode:
-```
+```js
 "use strict";
 function test(a) {
     a = 99;
@@ -353,15 +355,15 @@ Both LE and VE contain:
 1. Environment Record
 2. Outer (Reference to parent Lexical Environment)
 
-### Function LE
-The function Lexical Environment uses a Function Environment Record, which is basically an extension of DER. So basically,
+### Function's LE
+The function's Lexical Environment uses a Function Environment Record, which is basically an extension of DER. So basically,
 ```
 FunctionEnvironmentRecord = DER + parameters + arguments + function name + super + this binding logic
 ```
 The FER simply adds extra fields on top of DER.
 
-### Function VE
-The function variable environment uses the normal declarative environment record as its environment record.
+### Function's VE
+The function's variable environment uses the normal declarative environment record as its environment record.
 
 
 ### Final Model
