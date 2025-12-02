@@ -382,5 +382,77 @@ FunctionExecutionContext:
         <value>
 ```
 
+## Arrow Functions
+Arrow functions are special because they break the usual rules of execution contexts and environment records. 
+They use Declarative Environment Record for their lexical environment. It simply reuses the outer Lexical Environment’s bindings. So, eventually:
+1. It does not have its own `this` binding.
+2. It does not have its own `arguments` object.
+3. It does not have its own `super`
+4. The function name is inherited from outer scope.
+5. As for function parameters, normally they go into FER, but in this case, they are put into DER (because obviously, arrow functions still need parameters, so they were put into DER of arrow function)
+6. So basically, they have made the EV of arrow function "lighter" than normal function.
+
+
+#### NOTE: The function name binding is resolved from the outer scope. 
+```js
+const f = () => console.log(f);
+f();
+```
+Inside the arrow function, `f` works only because it resolves from the outer scope:
+- It is not an internal function name binding
+- It comes from the outer lexical environment (the let-bound variable)
+
+```
+ArrowFunctionExecutionContext
+|
+|-- LexicalEnvironment:
+|       ER = DeclarativeEnvironmentRecord
+|       Outer = parent's LE
+|
+|-- VariableEnvironment:
+|       ER = DeclarativeEnvironmentRecord (var inside arrow)
+|
+|-- ThisBinding = taken from OUTER EC (not created here)
+|
+|-- No arguments object created
+```
+
+
+### Comparison
+Normal Function
+```
+Function LE:
+   EnvironmentRecord = FunctionEnvironmentRecord
+       a: <value>
+       b: <value>
+       arguments: { ... }
+       this: <new this>
+```
+Arrow Function
+```
+Arrow Function LE:
+   EnvironmentRecord = DeclarativeEnvironmentRecord
+       a: <value>
+       b: <value>
+   (NO arguments)
+   (NO this)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
