@@ -509,26 +509,106 @@ Thus:
 
 
 
-## IMPORTANT DIFFERENCES FROM DECLARATIVE ER
+## Declartive ER vs Object ER
 
 | Feature                           | Declarative ER            | Object ER                    |
 | --------------------------------- | ------------------------- | ---------------------------- |
 | Stores variables in               | internal record           | actual JavaScript object     |
 | Has TDZ                           | YES                       | NO                           |
-| Used for                          | let/const/var-in-function | global var, with-object      |
+| Used for                          | let, const, function block bindings, var inside function | global var, global function, with binding      |
 | Allows shadowing local variables? | Yes                       | Not in global OER            |
 | Find operation                    | identifier → binding      | identifier → property lookup |
+| Storage                           | Not visible to JS         | visible via global object    |
+
+###  Internal Structure
+- A Declarative ER stores bindings in a pure internal spec-defined map, NOT in an object. 
+- An Object ER stores bindings in an actual JavaScript object - usually the global object.
+
+### Example 1: Global var lives in OER
+
+```js
+var x = 10;
+console.log(window.x); // 10
+```
+- Why? `var` is stored inside the global Object ER, backed by the window.
+
+Structure:
+```js
+Global LE
+   DER → (holds global let/const)
+   OER → { x:10 }  ← stored on window
+```
+
+### Example 2: Global let lives in DER, NOT OER
+```js
+let y = 20;
+console.log(window.y); // undefined
+```
+
+- Why? `let` is stored in the Declarative ER, not on the global object.
+
+```js
+Global LE
+   DER → { y:20 }
+   OER → { x:10 }
+```
+
+- This proves: OER ≠ DER
 
 
+### Example 3: Function var lives in DER (NOT OER)
+```js
+function test() {
+    var a = 5;
+    console.log(a);     // 5
+    console.log(window.a); // undefined
+}
+```
+- Why? Function `var` uses the function’s Variable Environment, which uses a Declarative ER, not OER.
+- This proves:
+    - Function var does NOT use Object ER
+    - Only global var does.
+
+- Why not use OER for `var` inside functions?
+    - Because function-scope `var` should NOT appear on global object.
+    - Should NOT be enumerable
+    - Should NOT behave like object properties.
+    - Should use normal lexical lookup rules.
+    - So, DER is the right place.
+
+### Example 4: TDZ exists in DER, not OER
+```js
+console.log(foo); // ReferenceError
+let foo = 10;
+```
+```js
+console.log(bar); // undefined
+var bar = 20;
+```
+- DER can enforce TDZ (in case of let/const only).
 
 
+### An important question
+#### If DER enforces TDZ, then what about the variable environment of a function? Its environment record uses DER too. But all the vars go inside variable environment, but they don't have TDZ.
 
+A Declarative Environment Record is a general-purpose structure. It can store different kinds of bindings:
+1. Lexical bindings (let/const)
+    - have TDZ
+    - are initialized later -> unitialized state exists 
+2. Function-scoped bindings (var)
+    - no TDZ
+    - initialized immediately to undefined during creation phase
+Both live in DER, but the binding type differs.
+<br>
+So, the DER can behave differently depending on how it is created.
+- The DER used for function `var` bindings does NOT use TDZ rules.
+- The DER used for `let/const` DOES use TDZ rules.
 
-
-
-
-
-
+#### Short answer:
+- Because the Declarative Environment Record does NOT inherently include TDZ. TDZ applies only to `let` and `const` bindings — not to `var`.
+- Thus, a DER can hold BOTH:
+    - bindings that have TDZ
+    - bindings that dont have TDZ 
 
 
 
