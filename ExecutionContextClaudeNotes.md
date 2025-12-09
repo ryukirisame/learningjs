@@ -14874,3 +14874,5776 @@ Context persists between next() calls!
 
 
 
+# **PART 7: ADVANCED TOPICS (CONTINUED)**
+
+## **16. ASYNCHRONOUS JAVASCRIPT AND EXECUTION CONTEXT**
+
+### **16.1 Event Loop Explained**
+
+The **Event Loop** coordinates execution of code, events, and messages in JavaScript's single-threaded environment.
+
+#### **Event Loop Architecture:**
+
+```javascript
+/*
+═══════════════════════════════════════════════════════════
+JAVASCRIPT RUNTIME ARCHITECTURE
+═══════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────┐
+│                 JAVASCRIPT ENGINE               │
+├─────────────────────────────────────────────────┤
+│                                                 │
+│  ┌──────────────────────────────────────────┐  │
+│  │         CALL STACK                       │  │
+│  │  [Global EC]                             │  │
+│  │  [function1 EC]                          │  │
+│  │  [function2 EC]  ← Currently executing   │  │
+│  └──────────────────────────────────────────┘  │
+│                                                 │
+│  ┌──────────────────────────────────────────┐  │
+│  │         HEAP                             │  │
+│  │  (Memory allocation for objects)         │  │
+│  └──────────────────────────────────────────┘  │
+│                                                 │
+└─────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────┐
+│             WEB APIs / NODE APIs                │
+├─────────────────────────────────────────────────┤
+│  - setTimeout/setInterval                       │
+│  - DOM Events                                   │
+│  - Fetch API / HTTP                             │
+│  - File System (Node.js)                        │
+│  - etc.                                         │
+└─────────────────────────────────────────────────┘
+                        ↓
+┌─────────────────────────────────────────────────┐
+│              CALLBACK QUEUES                    │
+├─────────────────────────────────────────────────┤
+│                                                 │
+│  ┌──────────────────────────────────────────┐  │
+│  │    MICROTASK QUEUE (Priority)            │  │
+│  │  [Promise callback 1]                    │  │
+│  │  [Promise callback 2]                    │  │
+│  │  [queueMicrotask callback]               │  │
+│  └──────────────────────────────────────────┘  │
+│                                                 │
+│  ┌──────────────────────────────────────────┐  │
+│  │    MACROTASK QUEUE (Task Queue)          │  │
+│  │  [setTimeout callback 1]                 │  │
+│  │  [setInterval callback]                  │  │
+│  │  [I/O callback]                          │  │
+│  └──────────────────────────────────────────┘  │
+│                                                 │
+└─────────────────────────────────────────────────┘
+                        ↓
+┌─────────────────────────────────────────────────┐
+│              EVENT LOOP                         │
+│  Continuously checks:                           │
+│  1. Is call stack empty?                        │
+│  2. Process all microtasks                      │
+│  3. Process one macrotask                       │
+│  4. Repeat                                      │
+└─────────────────────────────────────────────────┘
+*/
+
+// Demonstration of Event Loop
+console.log('1. Sync start');
+
+setTimeout(() => {
+    console.log('2. Timeout (macrotask)');
+}, 0);
+
+Promise.resolve()
+    .then(() => {
+        console.log('3. Promise 1 (microtask)');
+    })
+    .then(() => {
+        console.log('4. Promise 2 (microtask)');
+    });
+
+console.log('5. Sync end');
+
+/*
+Output order:
+1. Sync start
+5. Sync end
+3. Promise 1 (microtask)
+4. Promise 2 (microtask)
+2. Timeout (macrotask)
+
+═══════════════════════════════════════════════════════════
+EXECUTION TIMELINE
+═══════════════════════════════════════════════════════════
+
+TIME 0: Synchronous Code Execution
+───────────────────────────────────
+Call Stack: [Global EC]
+Execute: console.log('1. Sync start')
+Output: "1. Sync start"
+
+TIME 1: setTimeout() encountered
+─────────────────────────────────
+Call Stack: [Global EC]
+Action: Register timeout callback with Web API
+Callback Queue (Macrotask): [timeout callback]
+
+TIME 2: Promise.resolve().then() encountered
+─────────────────────────────────────────────
+Call Stack: [Global EC]
+Action: Register promise callbacks
+Callback Queue (Microtask): [promise1 callback, promise2 callback]
+
+TIME 3: Continue synchronous code
+───────────────────────────────────
+Call Stack: [Global EC]
+Execute: console.log('5. Sync end')
+Output: "5. Sync end"
+
+TIME 4: Call stack empty - Event Loop activates
+────────────────────────────────────────────────
+Call Stack: []
+
+Event Loop Check:
+1. Call stack empty? YES
+2. Microtask queue empty? NO
+3. Execute ALL microtasks:
+
+   Process promise1 callback:
+   Call Stack: [promise1 callback]
+   Output: "3. Promise 1 (microtask)"
+   Call Stack: []
+   
+   Process promise2 callback:
+   Call Stack: [promise2 callback]
+   Output: "4. Promise 2 (microtask)"
+   Call Stack: []
+
+4. Microtask queue now empty
+5. Take ONE macrotask:
+
+   Process timeout callback:
+   Call Stack: [timeout callback]
+   Output: "2. Timeout (macrotask)"
+   Call Stack: []
+
+6. Repeat event loop cycle
+*/
+```
+
+#### **Event Loop Detailed Example:**
+
+```javascript
+console.log('Script start');
+
+setTimeout(() => {
+    console.log('setTimeout 1');
+    Promise.resolve().then(() => {
+        console.log('Promise inside setTimeout');
+    });
+}, 0);
+
+Promise.resolve()
+    .then(() => {
+        console.log('Promise 1');
+        setTimeout(() => {
+            console.log('setTimeout inside Promise');
+        }, 0);
+    })
+    .then(() => {
+        console.log('Promise 2');
+    });
+
+setTimeout(() => {
+    console.log('setTimeout 2');
+}, 0);
+
+console.log('Script end');
+
+/*
+Output:
+Script start
+Script end
+Promise 1
+Promise 2
+setTimeout 1
+Promise inside setTimeout
+setTimeout inside Promise
+setTimeout 2
+
+═══════════════════════════════════════════════════════════
+DETAILED EXECUTION BREAKDOWN
+═══════════════════════════════════════════════════════════
+
+PHASE 1: SYNCHRONOUS EXECUTION
+────────────────────────────────
+Call Stack: [Global EC]
+
+Line: console.log('Script start')
+Output: "Script start"
+
+Line: setTimeout(..., 0)  // First setTimeout
+Action: Register callback → Macrotask Queue
+Macrotask Queue: [setTimeout1]
+
+Line: Promise.resolve().then(...)
+Action: Register callback → Microtask Queue
+Microtask Queue: [Promise1]
+
+Line: setTimeout(..., 0)  // Second setTimeout
+Action: Register callback → Macrotask Queue
+Macrotask Queue: [setTimeout1, setTimeout2]
+
+Line: console.log('Script end')
+Output: "Script end"
+
+Call Stack: [] (empty)
+
+PHASE 2: MICROTASK PROCESSING
+──────────────────────────────
+Event Loop: Check microtask queue
+
+Microtask 1: Promise1 callback
+Call Stack: [Promise1 callback]
+Output: "Promise 1"
+
+Inside Promise1:
+  Line: setTimeout(...) 
+  Action: Register → Macrotask Queue
+  Macrotask Queue: [setTimeout1, setTimeout2, setTimeoutInsidePromise]
+  
+  Line: return (implicit, chains to Promise2)
+  Action: Register Promise2 → Microtask Queue
+  Microtask Queue: [Promise2]
+
+Call Stack: []
+
+Microtask 2: Promise2 callback
+Call Stack: [Promise2 callback]
+Output: "Promise 2"
+Call Stack: []
+
+Microtask Queue: [] (empty)
+
+PHASE 3: MACROTASK PROCESSING
+──────────────────────────────
+Event Loop: Take ONE macrotask
+
+Macrotask 1: setTimeout1 callback
+Call Stack: [setTimeout1 callback]
+Output: "setTimeout 1"
+
+Inside setTimeout1:
+  Line: Promise.resolve().then(...)
+  Action: Register → Microtask Queue
+  Microtask Queue: [PromiseInsideSetTimeout]
+
+Call Stack: []
+
+Event Loop: Check microtask queue (BEFORE next macrotask!)
+
+Microtask: PromiseInsideSetTimeout
+Call Stack: [PromiseInsideSetTimeout callback]
+Output: "Promise inside setTimeout"
+Call Stack: []
+
+Microtask Queue: [] (empty)
+
+Macrotask 2: setTimeoutInsidePromise callback
+Call Stack: [setTimeoutInsidePromise callback]
+Output: "setTimeout inside Promise"
+Call Stack: []
+
+Macrotask 3: setTimeout2 callback
+Call Stack: [setTimeout2 callback]
+Output: "setTimeout 2"
+Call Stack: []
+
+Macrotask Queue: [] (empty)
+Program Complete
+
+═══════════════════════════════════════════════════════════
+KEY RULES
+═══════════════════════════════════════════════════════════
+
+1. Synchronous code executes first (until call stack empty)
+2. When call stack empty, process ALL microtasks
+3. After microtasks, process ONE macrotask
+4. After each macrotask, process ALL microtasks again
+5. Repeat 3-4 until all queues empty
+*/
+```
+
+### **16.2 Call Stack vs Callback Queue**
+
+#### **Call Stack Behavior:**
+
+```javascript
+function first() {
+    console.log('First');
+    second();
+    console.log('First again');
+}
+
+function second() {
+    console.log('Second');
+    third();
+    console.log('Second again');
+}
+
+function third() {
+    console.log('Third');
+}
+
+console.log('Start');
+first();
+console.log('End');
+
+/*
+═══════════════════════════════════════════════════════════
+CALL STACK VISUALIZATION
+═══════════════════════════════════════════════════════════
+
+Time 0: console.log('Start')
+┌─────────────┐
+│ Global EC   │
+└─────────────┘
+Output: "Start"
+
+Time 1: first() called
+┌─────────────┐
+│ first() EC  │
+├─────────────┤
+│ Global EC   │
+└─────────────┘
+Output: "First"
+
+Time 2: second() called
+┌─────────────┐
+│ second() EC │
+├─────────────┤
+│ first() EC  │
+├─────────────┤
+│ Global EC   │
+└─────────────┘
+Output: "Second"
+
+Time 3: third() called
+┌─────────────┐
+│ third() EC  │
+├─────────────┤
+│ second() EC │
+├─────────────┤
+│ first() EC  │
+├─────────────┤
+│ Global EC   │
+└─────────────┘
+Output: "Third"
+
+Time 4: third() returns
+┌─────────────┐
+│ second() EC │
+├─────────────┤
+│ first() EC  │
+├─────────────┤
+│ Global EC   │
+└─────────────┘
+Output: "Second again"
+
+Time 5: second() returns
+┌─────────────┐
+│ first() EC  │
+├─────────────┤
+│ Global EC   │
+└─────────────┘
+Output: "First again"
+
+Time 6: first() returns
+┌─────────────┐
+│ Global EC   │
+└─────────────┘
+Output: "End"
+
+Final Output:
+Start
+First
+Second
+Third
+Second again
+First again
+End
+
+All synchronous - no queues involved!
+*/
+```
+
+#### **Callback Queue Interaction:**
+
+```javascript
+console.log('Start');
+
+setTimeout(() => {
+    console.log('Timeout 1');
+}, 0);
+
+setTimeout(() => {
+    console.log('Timeout 2');
+}, 0);
+
+console.log('End');
+
+/*
+═══════════════════════════════════════════════════════════
+CALL STACK + CALLBACK QUEUE
+═══════════════════════════════════════════════════════════
+
+Phase 1: Synchronous execution
+───────────────────────────────
+Time 0:
+Call Stack: [Global EC]
+console.log('Start')
+Output: "Start"
+
+Time 1:
+Call Stack: [Global EC]
+setTimeout(...) registered
+Callback Queue: [Timeout1]
+
+Time 2:
+Call Stack: [Global EC]
+setTimeout(...) registered
+Callback Queue: [Timeout1, Timeout2]
+
+Time 3:
+Call Stack: [Global EC]
+console.log('End')
+Output: "End"
+
+Call Stack: [] (EMPTY)
+
+Phase 2: Event loop processes queue
+────────────────────────────────────
+Time 4:
+Call Stack: []
+Event Loop: Take from Callback Queue
+Call Stack: [Timeout1 callback]
+console.log('Timeout 1')
+Output: "Timeout 1"
+Call Stack: []
+
+Time 5:
+Call Stack: []
+Event Loop: Take from Callback Queue
+Call Stack: [Timeout2 callback]
+console.log('Timeout 2')
+Output: "Timeout 2"
+Call Stack: []
+
+Final Output:
+Start
+End
+Timeout 1
+Timeout 2
+
+Notice: Callbacks wait until call stack is empty!
+*/
+```
+
+### **16.3 Microtasks vs Macrotasks**
+
+#### **Microtasks:**
+
+```javascript
+/*
+═══════════════════════════════════════════════════════════
+MICROTASKS (High Priority)
+═══════════════════════════════════════════════════════════
+
+Sources of Microtasks:
+1. Promise callbacks (.then, .catch, .finally)
+2. queueMicrotask() API
+3. MutationObserver callbacks
+4. process.nextTick() (Node.js - even higher priority)
+
+Characteristics:
+- Execute immediately after current script
+- ALL microtasks processed before any macrotask
+- Can queue more microtasks (careful of infinite loops!)
+*/
+
+console.log('Start');
+
+queueMicrotask(() => {
+    console.log('Microtask 1');
+});
+
+Promise.resolve().then(() => {
+    console.log('Promise 1');
+    queueMicrotask(() => {
+        console.log('Microtask 2 (queued from Promise)');
+    });
+});
+
+Promise.resolve().then(() => {
+    console.log('Promise 2');
+});
+
+console.log('End');
+
+/*
+Output:
+Start
+End
+Microtask 1
+Promise 1
+Promise 2
+Microtask 2 (queued from Promise)
+
+═══════════════════════════════════════════════════════════
+EXECUTION FLOW
+═══════════════════════════════════════════════════════════
+
+SYNC PHASE:
+Call Stack: [Global EC]
+Output: "Start"
+Microtask Queue: [Microtask1]
+Microtask Queue: [Microtask1, Promise1]
+Microtask Queue: [Microtask1, Promise1, Promise2]
+Output: "End"
+Call Stack: []
+
+MICROTASK PHASE:
+Process: Microtask1
+Output: "Microtask 1"
+
+Process: Promise1
+Output: "Promise 1"
+Microtask Queue: [Promise2, Microtask2]  ← New microtask added!
+
+Process: Promise2
+Output: "Promise 2"
+
+Process: Microtask2
+Output: "Microtask 2 (queued from Promise)"
+
+All microtasks processed before ANY macrotask!
+*/
+```
+
+#### **Macrotasks:**
+
+```javascript
+/*
+═══════════════════════════════════════════════════════════
+MACROTASKS (Normal Priority)
+═══════════════════════════════════════════════════════════
+
+Sources of Macrotasks:
+1. setTimeout
+2. setInterval
+3. setImmediate (Node.js)
+4. I/O operations
+5. UI rendering (browser)
+6. User interactions (clicks, etc.)
+
+Characteristics:
+- Execute after all microtasks
+- ONE macrotask per event loop cycle
+- After each macrotask, process all microtasks again
+*/
+
+console.log('Start');
+
+setTimeout(() => {
+    console.log('Macrotask 1');
+    Promise.resolve().then(() => {
+        console.log('Microtask from Macrotask 1');
+    });
+}, 0);
+
+setTimeout(() => {
+    console.log('Macrotask 2');
+}, 0);
+
+Promise.resolve().then(() => {
+    console.log('Microtask 1');
+});
+
+console.log('End');
+
+/*
+Output:
+Start
+End
+Microtask 1
+Macrotask 1
+Microtask from Macrotask 1
+Macrotask 2
+
+═══════════════════════════════════════════════════════════
+DETAILED TIMELINE
+═══════════════════════════════════════════════════════════
+
+SYNC:
+Call Stack: [Global EC]
+Output: "Start", "End"
+Microtask Queue: [Microtask1]
+Macrotask Queue: [Macrotask1, Macrotask2]
+Call Stack: []
+
+MICROTASKS:
+Process: Microtask1
+Output: "Microtask 1"
+Microtask Queue: []
+
+MACROTASK 1:
+Process: Macrotask1
+Output: "Macrotask 1"
+Microtask Queue: [MicrotaskFromMacrotask1]
+
+MICROTASKS (again!):
+Process: MicrotaskFromMacrotask1
+Output: "Microtask from Macrotask 1"
+Microtask Queue: []
+
+MACROTASK 2:
+Process: Macrotask2
+Output: "Macrotask 2"
+
+Pattern: Sync → All Micros → One Macro → All Micros → One Macro ...
+*/
+```
+
+#### **Complex Microtask vs Macrotask Example:**
+
+```javascript
+console.log('1. Sync start');
+
+setTimeout(() => {
+    console.log('2. Timeout 1');
+    Promise.resolve().then(() => {
+        console.log('3. Promise in Timeout 1');
+    });
+}, 0);
+
+Promise.resolve()
+    .then(() => {
+        console.log('4. Promise 1');
+        setTimeout(() => {
+            console.log('5. Timeout in Promise 1');
+        }, 0);
+    })
+    .then(() => {
+        console.log('6. Promise 2');
+    });
+
+setTimeout(() => {
+    console.log('7. Timeout 2');
+    Promise.resolve().then(() => {
+        console.log('8. Promise in Timeout 2');
+    });
+}, 0);
+
+Promise.resolve().then(() => {
+    console.log('9. Promise 3');
+});
+
+console.log('10. Sync end');
+
+/*
+Correct Output:
+1. Sync start
+10. Sync end
+4. Promise 1
+6. Promise 2
+9. Promise 3
+2. Timeout 1
+3. Promise in Timeout 1
+7. Timeout 2
+8. Promise in Timeout 2
+5. Timeout in Promise 1
+
+═══════════════════════════════════════════════════════════
+STEP-BY-STEP EXECUTION
+═══════════════════════════════════════════════════════════
+
+PHASE: Synchronous Code
+────────────────────────
+Execute: console.log('1. Sync start')
+Output: "1. Sync start"
+
+Register: setTimeout → Macrotask Queue
+Macrotask Queue: [Timeout1]
+
+Register: Promise.resolve().then() → Microtask Queue
+Microtask Queue: [Promise1]
+
+Register: setTimeout → Macrotask Queue
+Macrotask Queue: [Timeout1, Timeout2]
+
+Register: Promise.resolve().then() → Microtask Queue
+Microtask Queue: [Promise1, Promise3]
+
+Execute: console.log('10. Sync end')
+Output: "10. Sync end"
+
+PHASE: Microtask Processing (First Round)
+──────────────────────────────────────────
+Process: Promise1
+Output: "4. Promise 1"
+Register: setTimeout → Macrotask Queue
+Macrotask Queue: [Timeout1, Timeout2, TimeoutInPromise1]
+Chain to: Promise2 → Microtask Queue
+Microtask Queue: [Promise3, Promise2]
+
+Process: Promise3
+Output: "9. Promise 3"
+
+Process: Promise2
+Output: "6. Promise 2"
+
+Microtask Queue: [] (empty)
+
+PHASE: Macrotask Processing (Round 1)
+──────────────────────────────────────
+Process: Timeout1
+Output: "2. Timeout 1"
+Register: Promise → Microtask Queue
+Microtask Queue: [PromiseInTimeout1]
+
+Check Microtasks:
+Process: PromiseInTimeout1
+Output: "3. Promise in Timeout 1"
+Microtask Queue: []
+
+PHASE: Macrotask Processing (Round 2)
+──────────────────────────────────────
+Process: Timeout2
+Output: "7. Timeout 2"
+Register: Promise → Microtask Queue
+Microtask Queue: [PromiseInTimeout2]
+
+Check Microtasks:
+Process: PromiseInTimeout2
+Output: "8. Promise in Timeout 2"
+Microtask Queue: []
+
+PHASE: Macrotask Processing (Round 3)
+──────────────────────────────────────
+Process: TimeoutInPromise1
+Output: "5. Timeout in Promise 1"
+
+Macrotask Queue: [] (empty)
+Done!
+*/
+```
+
+### **16.4 Promise Execution Context**
+
+#### **Promise Chain Execution:**
+
+```javascript
+console.log('Start');
+
+new Promise((resolve, reject) => {
+    console.log('Promise executor (sync)');
+    resolve('Success');
+    console.log('After resolve (still sync)');
+})
+    .then(result => {
+        console.log('Then 1:', result);
+        return 'Value from then 1';
+    })
+    .then(result => {
+        console.log('Then 2:', result);
+    })
+    .catch(error => {
+        console.log('Catch:', error);
+    })
+    .finally(() => {
+        console.log('Finally');
+    });
+
+console.log('End');
+
+/*
+Output:
+Start
+Promise executor (sync)
+After resolve (still sync)
+End
+Then 1: Success
+Then 2: Value from then 1
+Finally
+
+═══════════════════════════════════════════════════════════
+PROMISE EXECUTION CONTEXT
+═══════════════════════════════════════════════════════════
+
+TIME 0: new Promise(executor)
+─────────────────────────────
+Call Stack:
+┌────────────────────────────┐
+│ executor function          │
+├────────────────────────────┤
+│ Global EC                  │
+└────────────────────────────┘
+
+Execute: console.log('Promise executor (sync)')
+Output: "Promise executor (sync)"
+
+Execute: resolve('Success')
+Action: Mark promise as fulfilled
+        Queue .then() callback to Microtask Queue
+Microtask Queue: [then1]
+
+Execute: console.log('After resolve (still sync)')
+Output: "After resolve (still sync)"
+Note: Executor is SYNCHRONOUS!
+
+Return: Promise object
+Call Stack: [Global EC]
+
+TIME 1: .then() registered
+──────────────────────────
+Action: If promise already resolved, queue callback
+Microtask Queue: [then1]  (already there)
+
+TIME 2: .then() chained
+───────────────────────
+Action: Register next callback (waits for then1)
+
+TIME 3: .catch() registered
+───────────────────────────
+Action: Register error handler (not called if no error)
+
+TIME 4: .finally() registered
+─────────────────────────────
+Action: Register finally handler (always called)
+
+TIME 5: Synchronous code continues
+───────────────────────────────────
+Execute: console.log('End')
+Output: "End"
+Call Stack: []
+
+TIME 6: Event Loop processes microtasks
+────────────────────────────────────────
+Process: then1 callback
+Call Stack:
+┌────────────────────────────┐
+│ then1 callback             │
+│ result: 'Success'          │
+└────────────────────────────┘
+
+Output: "Then 1: Success"
+Return: 'Value from then 1'
+Action: Queue then2 callback
+Microtask Queue: [then2]
+Call Stack: []
+
+TIME 7: Process then2
+─────────────────────
+Call Stack:
+┌────────────────────────────┐
+│ then2 callback             │
+│ result: 'Value from then 1'│
+└────────────────────────────┘
+
+Output: "Then 2: Value from then 1"
+Action: Queue finally callback
+Microtask Queue: [finally]
+Call Stack: []
+
+TIME 8: Process finally
+───────────────────────
+Call Stack:
+┌────────────────────────────┐
+│ finally callback           │
+└────────────────────────────┘
+
+Output: "Finally"
+Call Stack: []
+
+Microtask Queue: []
+Done!
+
+═══════════════════════════════════════════════════════════
+KEY POINTS
+═══════════════════════════════════════════════════════════
+
+1. Promise executor is SYNCHRONOUS
+2. .then/.catch/.finally callbacks are ASYNCHRONOUS (microtasks)
+3. Callbacks execute in order (chaining)
+4. Each callback creates new execution context
+5. Return value becomes next promise's resolution value
+*/
+```
+
+#### **Async/Await Execution Context:**
+
+```javascript
+async function asyncFunction() {
+    console.log('1. Async function start');
+    
+    const result = await Promise.resolve('Data');
+    console.log('2. After await:', result);
+    
+    const result2 = await Promise.resolve('More data');
+    console.log('3. After second await:', result2);
+    
+    return 'Done';
+}
+
+console.log('4. Before calling async function');
+const promise = asyncFunction();
+console.log('5. After calling async function');
+
+promise.then(result => {
+    console.log('6. Promise resolved:', result);
+});
+
+console.log('7. End');
+
+/*
+Output:
+4. Before calling async function
+1. Async function start
+5. After calling async function
+7. End
+2. After await: Data
+3. After second await: More data
+6. Promise resolved: Done
+
+═══════════════════════════════════════════════════════════
+ASYNC/AWAIT EXECUTION CONTEXT
+═══════════════════════════════════════════════════════════
+
+TIME 0: console.log('4. Before...')
+───────────────────────────────────
+Call Stack: [Global EC]
+Output: "4. Before calling async function"
+
+TIME 1: asyncFunction() called
+──────────────────────────────
+Call Stack:
+┌────────────────────────────┐
+│ asyncFunction EC           │
+├────────────────────────────┤
+│ Global EC                  │
+└────────────────────────────┘
+
+Execute: console.log('1. Async function start')
+Output: "1. Async function start"
+
+Hit: await Promise.resolve('Data')
+Action: 
+1. Promise.resolve() creates fulfilled promise
+2. Register continuation as microtask
+3. SUSPEND asyncFunction execution context
+4. Return promise to caller
+5. Save context state
+
+Microtask Queue: [asyncFunction continuation 1]
+
+Call Stack: [Global EC]
+(asyncFunction suspended)
+
+TIME 2: console.log('5. After calling...')
+──────────────────────────────────────────
+Call Stack: [Global EC]
+Output: "5. After calling async function"
+
+TIME 3: promise.then() registered
+─────────────────────────────────
+Microtask Queue: [asyncFunction cont 1, then callback]
+
+TIME 4: console.log('7. End')
+─────────────────────────────
+Call Stack: [Global EC]
+Output: "7. End"
+Call Stack: []
+
+TIME 5: Event loop processes microtasks
+────────────────────────────────────────
+Process: asyncFunction continuation 1
+Call Stack:
+┌────────────────────────────┐
+│ asyncFunction EC (RESTORED)│
+│ result: 'Data'             │
+└────────────────────────────┘
+
+Output: "2. After await: Data"
+
+Hit: await Promise.resolve('More data')
+Action:
+1. Promise.resolve() creates fulfilled promise
+2. Register continuation as microtask
+3. SUSPEND again
+4. Save context state
+
+Microtask Queue: [then callback, asyncFunction cont 2]
+Call Stack: []
+
+TIME 6: Process asyncFunction continuation 2
+────────────────────────────────────────────
+Call Stack:
+┌────────────────────────────┐
+│ asyncFunction EC (RESTORED)│
+│ result: 'Data'             │
+│ result2: 'More data'       │
+└────────────────────────────┘
+
+Output: "3. After second await: More data"
+
+Execute: return 'Done'
+Action: Resolve asyncFunction's returned promise
+Microtask Queue: [then callback]
+Call Stack: []
+
+TIME 7: Process then callback
+─────────────────────────────
+Call Stack:
+┌────────────────────────────┐
+│ then callback              │
+│ result: 'Done'             │
+└────────────────────────────┘
+
+Output: "6. Promise resolved: Done"
+Call Stack: []
+
+Done!
+
+═══════════════════════════════════════════════════════════
+ASYNC/AWAIT KEY BEHAVIORS
+═══════════════════════════════════════════════════════════
+
+1. async function returns Promise immediately
+2. Execution context SUSPENDED at await
+3. Context PRESERVED in memory
+4. RESTORED when promise resolves
+5. Variables persist across awaits
+6. Each await adds microtask to queue
+7. Function can suspend multiple times
+*/
+```
+
+### **16.5 SetTimeout and SetInterval**
+
+#### **SetTimeout Execution:**
+
+```javascript
+console.log('Start');
+
+setTimeout(() => {
+    console.log('Timeout 0ms');
+}, 0);
+
+setTimeout(() => {
+    console.log('Timeout 10ms');
+}, 10);
+
+for (let i = 0; i < 1000000000; i++) {
+    // Busy work
+}
+
+console.log('End');
+
+/*
+═══════════════════════════════════════════════════════════
+SETTIMEOUT ISN'T GUARANTEED TIMING
+═══════════════════════════════════════════════════════════
+
+Output (timing may vary):
+Start
+End
+Timeout 0ms
+Timeout 10ms
+
+Note: Even setTimeout(..., 0) doesn't execute immediately!
+
+Why?
+1. setTimeout registers callback with Web API/Node API
+2. Callback goes to Macrotask Queue after delay
+3. Event loop processes queue only when call stack empty
+4. Long synchronous operation (loop) blocks event loop
+
+Timeline:
+─────────
+
+T=0ms: setTimeout(..., 0) registered
+       Minimum delay: ~4ms (browser minimum)
+       
+T=0ms: setTimeout(..., 10) registered
+       Will fire after 10ms
+       
+T=0ms-500ms: for loop blocks call stack
+             Event loop CANNOT process callbacks!
+             
+T=500ms: for loop completes
+         console.log('End')
+         Call Stack: []
+         
+T=500ms: Event loop checks macrotask queue
+         Both timeouts already expired
+         Process: Timeout 0ms
+         Output: "Timeout 0ms"
+         
+T=500ms: Process: Timeout 10ms
+         Output: "Timeout 10ms"
+
+Key Point: Timeout specifies MINIMUM delay, not exact timing!
+          If call stack is busy, callback waits.
+*/
+```
+
+#### **SetInterval Execution:**
+
+```javascript
+let count = 0;
+
+const intervalId = setInterval(() => {
+    count++;
+    console.log('Interval:', count);
+    
+    if (count === 3) {
+        clearInterval(intervalId);
+        console.log('Interval cleared');
+    }
+}, 100);
+
+console.log('Interval started');
+
+/*
+═══════════════════════════════════════════════════════════
+SETINTERVAL EXECUTION CONTEXT
+═══════════════════════════════════════════════════════════
+
+T=0ms: setInterval registered
+       Returns: intervalId (for clearing)
+       Timer started in Web API
+       
+T=0ms: console.log('Interval started')
+       Output: "Interval started"
+       
+T=100ms: First interval fires
+         Macrotask Queue: [interval callback 1]
+         Event Loop: Process callback
+         
+         Execution Context:
+         ┌────────────────────────────┐
+         │ interval callback          │
+         │ Closes over: count, intervalId
+         └────────────────────────────┘
+         
+         count++  (0 → 1)
+         Output: "Interval: 1"
+         Check: count === 3? No
+         Return
+         Timer schedules next callback
+         
+T=200ms: Second interval fires
+         count++  (1 → 2)
+         Output: "Interval: 2"
+         
+T=300ms: Third interval fires
+         count++  (2 → 3)
+         Output: "Interval: 3"
+         Check: count === 3? Yes
+         Execute: clearInterval(intervalId)
+         Action: Cancel timer in Web API
+         Output: "Interval cleared"
+         
+No more intervals fire!
+
+Final Output:
+Interval started
+Interval: 1
+Interval: 2
+Interval: 3
+Interval cleared
+
+═══════════════════════════════════════════════════════════
+SETINTERVAL MEMORY LEAK WARNING
+═══════════════════════════════════════════════════════════
+
+BAD: Forgetting to clear
+─────────────────────────
+function createCounter() {
+    let count = 0;
+    
+    setInterval(() => {
+        count++;
+        console.log(count);
+    }, 1000);
+}
+
+createCounter();
+// Interval runs FOREVER!
+// createCounter's closure kept in memory forever!
+// MEMORY LEAK!
+
+GOOD: Always clear
+──────────────────
+function createCounter() {
+    let count = 0;
+    
+    const intervalId = setInterval(() => {
+        count++;
+        console.log(count);
+        
+        if (count >= 10) {
+            clearInterval(intervalId);
+        }
+    }, 1000);
+    
+    return intervalId;  // Allow external clearing
+}
+
+const id = createCounter();
+// Later: clearInterval(id);
+*/
+```
+
+### **16.6 RequestAnimationFrame**
+
+#### **RAF Execution Context:**
+
+```javascript
+let frame = 0;
+
+function animate() {
+    frame++;
+    console.log('Frame:', frame);
+    
+    // Do animation work
+    const element = document.getElementById('box');
+    if (element) {
+        element.style.left = frame + 'px';
+    }
+    
+    if (frame < 5) {
+        requestAnimationFrame(animate);
+    }
+}
+
+console.log('Starting animation');
+requestAnimationFrame(animate);
+console.log('Animation scheduled');
+
+/*
+═══════════════════════════════════════════════════════════
+REQUESTANIMATIONFRAME (RAF)
+═══════════════════════════════════════════════════════════
+
+Special Task Queue:
+- Neither microtask nor regular macrotask
+- Animation Frame Queue
+- Executes before rendering, after microtasks
+- Synchronized with display refresh rate (usually 60 FPS)
+
+Timeline:
+─────────
+
+T=0ms: console.log('Starting animation')
+       Output: "Starting animation"
+       
+T=0ms: requestAnimationFrame(animate)
+       Action: Register animate callback in RAF queue
+       RAF Queue: [animate]
+       
+T=0ms: console.log('Animation scheduled')
+       Output: "Animation scheduled"
+       Call Stack: []
+       
+T=0ms: Process microtasks (if any)
+       Microtask Queue: []
+       
+T=~16ms: Browser ready to render (60 FPS)
+         Event Loop: Process RAF queue
+         
+         Execution Context:
+         ┌────────────────────────────┐
+         │ animate()                  │
+         │ Closes over: frame         │
+         └────────────────────────────┘
+         
+         frame++ (0 → 1)
+         Output: "Frame: 1"
+         Update DOM
+         Register next frame: requestAnimationFrame(animate)
+         RAF Queue: [animate]
+         
+T=~32ms: Next frame
+         frame++ (1 → 2)
+         Output: "Frame: 2"
+         
+T=~48ms: Next frame
+         frame++ (2 → 3)
+         Output: "Frame: 3"
+         
+T=~64ms: Next frame
+         frame++ (3 → 4)
+         Output: "Frame: 4"
+         
+T=~80ms: Next frame
+         frame++ (4 → 5)
+         Output: "Frame: 5"
+         Check: frame < 5? No
+         Don't request next frame
+         Animation stops
+
+Output:
+Starting animation
+Animation scheduled
+Frame: 1
+Frame: 2
+Frame: 3
+Frame: 4
+Frame: 5
+
+═══════════════════════════════════════════════════════════
+RAF VS SETTIMEOUT FOR ANIMATIONS
+═══════════════════════════════════════════════════════════
+
+setTimeout:
+✗ Not synced with display refresh
+✗ Can cause visual jank
+✗ Continues when tab inactive (wastes resources)
+✗ Fixed interval (e.g., 16ms) might drift
+
+requestAnimationFrame:
+✓ Synced with display refresh (60 FPS = ~16.67ms)
+✓ Smooth animations
+✓ Pauses when tab inactive (saves battery)
+✓ Adjusts to display refresh rate
+
+Example comparison:
+
+// BAD: setTimeout for animation
+function animateWithTimeout() {
+    // Update animation
+    setTimeout(animateWithTimeout, 16);  // Might drift!
+}
+
+// GOOD: RAF for animation
+function animateWithRAF() {
+    // Update animation
+    requestAnimationFrame(animateWithRAF);  // Perfect sync!
+}
+*/
+```
+
+---
+
+## **17. MEMORY MANAGEMENT**
+
+### **17.1 Garbage Collection Basics**
+
+#### **How Garbage Collection Works:**
+
+```javascript
+/*
+═══════════════════════════════════════════════════════════
+JAVASCRIPT GARBAGE COLLECTION
+═══════════════════════════════════════════════════════════
+
+Algorithm: Mark-and-Sweep (Most JavaScript engines)
+
+Process:
+1. MARK phase: Start from roots (global, call stack)
+2. Traverse all reachable objects
+3. Mark each reachable object
+4. SWEEP phase: Collect unmarked objects
+5. Free memory
+
+Roots:
+- Global object (window/global)
+- Currently executing function contexts
+- Active closures
+
+Example:
+*/
+
+function createObjects() {
+    // Object 1: Reachable (returned)
+    const obj1 = { name: 'Object 1' };
+    
+    // Object 2: Unreachable (not returned, not referenced)
+    const obj2 = { name: 'Object 2' };
+    
+    // Object 3: Unreachable (temporary)
+    const temp = { name: 'Temporary' };
+    
+    return obj1;
+}
+
+const myObj = createObjects();
+// After function execution:
+// obj1: Kept (referenced by myObj)
+// obj2: Garbage collected (no references)
+// temp: Garbage collected (no references)
+
+/*
+═══════════════════════════════════════════════════════════
+MARK-AND-SWEEP VISUALIZATION
+═══════════════════════════════════════════════════════════
+
+Before GC:
+──────────
+
+HEAP:
+┌──────────────────────┐
+│ obj1: {name: '...'}  │ ← Reachable (myObj → obj1)
+├──────────────────────┤
+│ obj2: {name: '...'}  │ ← Unreachable
+├──────────────────────┤
+│ temp: {name: '...'}  │ ← Unreachable
+└──────────────────────┘
+
+ROOTS:
+Global: { myObj → obj1 }
+
+MARK Phase:
+───────────
+1. Start from roots: myObj
+2. Mark obj1 (reachable from myObj)
+3. obj2 not reachable from any root
+4. temp not reachable from any root
+
+Marked: [obj1]
+Unmarked: [obj2, temp]
+
+SWEEP Phase:
+────────────
+Collect unmarked objects:
+- Free obj2 memory
+- Free temp memory
+
+After GC:
+─────────
+
+HEAP:
+┌──────────────────────┐
+│ obj1: {name: '...'}  │ ← Still alive
+└──────────────────────┘
+
+Memory reclaimed from obj2 and temp!
+*/
+```
+
+#### **Reference Counting (Old Approach):**
+
+```javascript
+/*
+═══════════════════════════════════════════════════════════
+REFERENCE COUNTING (Not used in modern engines)
+═══════════════════════════════════════════════════════════
+
+Concept:
+- Each object has reference count
+- Count increases when reference created
+- Count decreases when reference removed
+- When count reaches 0, collect object
+
+Problem: Circular references!
+*/
+
+// Circular reference problem
+function createCircular() {
+    const obj1 = {};
+    const obj2 = {};
+    
+    obj1.ref = obj2;  // obj1 → obj2
+    obj2.ref = obj1;  // obj2 → obj1
+    
+    return 'done';
+}
+
+createCircular();
+
+/*
+With Reference Counting:
+────────────────────────
+
+obj1:
+- ref count: 1 (from obj2.ref)
+- Never reaches 0!
+
+obj2:
+- ref count: 1 (from obj1.ref)
+- Never reaches 0!
+
+Both objects form circular reference:
+obj1 ←→ obj2
+
+Even though unreachable from roots,
+reference count never reaches 0.
+MEMORY LEAK!
+
+With Mark-and-Sweep:
+────────────────────
+
+MARK phase:
+1. Start from roots
+2. obj1 not reachable
+3. obj2 not reachable
+
+Both unmarked → Collected ✓
+
+Modern engines use Mark-and-Sweep,
+so circular references are handled correctly!
+*/
+```
+
+### **17.2 Memory Leaks in Closures**
+
+#### **Common Closure Memory Leaks:**
+
+```javascript
+/*
+═══════════════════════════════════════════════════════════
+LEAK 1: ACCIDENTAL GLOBAL REFERENCES
+═══════════════════════════════════════════════════════════
+*/
+
+function createLeak1() {
+    const data = new Array(1000000).fill('leak');
+    
+    // Accidentally creates global variable
+    leakyGlobal = function() {
+        console.log(data.length);
+    };
+}
+
+createLeak1();
+// leakyGlobal is now global
+// Keeps entire 'data' array in memory forever!
+
+/*
+Memory:
+┌────────────────────────────┐
+│ Global                     │
+│ leakyGlobal: <function>    │
+│   [[Scope]]: ──────┐       │
+└────────────────────┼───────┘
+                     ↓
+        ┌──────────────────────┐
+        │ createLeak1 Lex Env  │
+        │ data: [...]          │ ← 1MB kept forever!
+        └──────────────────────┘
+
+FIX: Use strict mode or declare properly
+*/
+'use strict';
+function createNoLeak1() {
+    const data = new Array(1000000).fill('no leak');
+    
+    // leakyGlobal = function() {...};  // ReferenceError!
+    
+    const properFunction = function() {
+        console.log(data.length);
+    };
+    
+    // If you don't return it, it's garbage collected
+}
+
+/*
+═══════════════════════════════════════════════════════════
+LEAK 2: DETACHED DOM NODES
+═══════════════════════════════════════════════════════════
+*/
+
+function createLeak2() {
+    const element = document.getElementById('myElement');
+    
+    element.addEventListener('click', function() {
+        console.log('Clicked');
+    });
+    
+    // Remove element from DOM
+    element.remove();
+    
+    // But event listener still references it!
+    // Element can't be garbage collected!
+}
+
+/*
+Memory:
+┌────────────────────────────────┐
+│ Event listener (closure)       │
+│ [[Scope]]: ────┐               │
+└────────────────┼───────────────┘
+                 ↓
+        ┌────────────────────┐
+        │ Lexical Env        │
+        │ element: <DOM>     │ ← Detached but not GC'd
+        └────────────────────┘
+
+FIX: Remove event listener before removing element
+*/
+
+function createNoLeak2() {
+    const element = document.getElementById('myElement');
+    
+    function handleClick() {
+        console.log('Clicked');
+    }
+    
+    element.addEventListener('click', handleClick);
+    
+    // Remove listener before removing element
+    element.removeEventListener('click', handleClick);
+    element.remove();
+    
+    // Now element can be garbage collected
+}
+
+/*
+═══════════════════════════════════════════════════════════
+LEAK 3: FORGOTTEN TIMERS
+═══════════════════════════════════════════════════════════
+*/
+
+function createLeak3() {
+    const data = new Array(1000000).fill('leak');
+    
+    setInterval(function() {
+        console.log(data.length);
+    }, 1000);
+    
+    // Interval never cleared!
+    // Keeps 'data' in memory forever!
+}
+
+/*
+FIX: Always clear timers
+*/
+
+function createNoLeak3() {
+    const data = new Array(1000000).fill('no leak');
+    let count = 0;
+    
+    const intervalId = setInterval(function() {
+        console.log(data.length);
+        count++;
+        
+        if (count >= 10) {
+            clearInterval(intervalId);
+            // Now data can be garbage collected
+        }
+    }, 1000);
+    
+    return intervalId;  // Allow external clearing
+}
+
+/*
+═══════════════════════════════════════════════════════════
+LEAK 4: CLOSURE OVER LARGE UNNECESSARY DATA
+═══════════════════════════════════════════════════════════
+*/
+
+function createLeak4() {
+    const hugeArray = new Array(1000000).fill('data');
+    const smallValue = hugeArray.length;
+    
+    // Returns function that only needs smallValue
+    // But keeps entire hugeArray in memory!
+    return function() {
+        console.log(smallValue);
+        // Doesn't use hugeArray at all!
+    };
+}
+
+/*
+FIX: Only close over what you need
+*/
+
+function createNoLeak4() {
+    const hugeArray = new Array(1000000).fill('data');
+    const smallValue = hugeArray.length;
+    // hugeArray can be GC'd after this line
+    
+    return function() {
+        console.log(smallValue);
+        // Only closes over smallValue (number)
+    };
+}
+
+// Or use IIFE:
+function createNoLeak4Alt() {
+    const smallValue = (function() {
+        const hugeArray = new Array(1000000).fill('data');
+        return hugeArray.length;
+        // hugeArray GC'd immediately after IIFE
+    })();
+    
+    return function() {
+        console.log(smallValue);
+    };
+}
+
+/*
+═══════════════════════════════════════════════════════════
+LEAK 5: CIRCULAR REFERENCES WITH CLOSURES
+═══════════════════════════════════════════════════════════
+*/
+
+function createLeak5() {
+    const obj = {
+        data: new Array(1000000).fill('data')
+    };
+    
+    obj.method = function() {
+        console.log(obj.data.length);
+    };
+    
+    // obj.method closes over obj
+    // obj has reference to obj.method
+    // Circular reference!
+    
+    // In old browsers with ref counting: memory leak
+    // In modern browsers with mark-and-sweep: OK if properly cleaned
+}
+
+/*
+═══════════════════════════════════════════════════════════
+BEST PRACTICES TO AVOID LEAKS
+═══════════════════════════════════════════════════════════
+
+1. ✓ Use 'use strict'
+2. ✓ Clear timers and intervals
+3. ✓ Remove event listeners
+4. ✓ Nullify references when done
+5. ✓ Use WeakMap/WeakSet for caches
+6. ✓ Only close over necessary variables
+7. ✓ Be careful with closures in loops
+8. ✓ Monitor memory usage in DevTools
+*/
+```
+
+### **17.3 WeakMap and WeakSet**
+
+#### **WeakMap for Memory-Efficient Caching:**
+
+```javascript
+/*
+═══════════════════════════════════════════════════════════
+WEAKMAP
+═══════════════════════════════════════════════════════════
+
+Characteristics:
+- Keys MUST be objects
+- Keys are weakly held
+- When key has no other references, entry is GC'd
+- No iteration methods (no keys(), values(), entries())
+- Cannot check size
+*/
+
+// Problem with regular Map:
+const cache = new Map();
+
+function cacheData(obj, data) {
+    cache.set(obj, data);
+}
+
+let myObj = { id: 1 };
+cacheData(myObj, 'cached data');
+
+// Even if we remove myObj:
+myObj = null;
+// Cache still holds reference to original object!
+// MEMORY LEAK!
+
+/*
+Regular Map:
+┌────────────────────────┐
+│ cache (Map)            │
+│ {id:1} → 'cached data' │ ← Still referenced!
+└────────────────────────┘
+
+Object can't be GC'd!
+*/
+
+// Solution with WeakMap:
+const weakCache = new WeakMap();
+
+function weakCacheData(obj, data) {
+    weakCache.set(obj, data);
+}
+
+let myObj2 = { id: 2 };
+weakCacheData(myObj2, 'cached data');
+
+// When we remove myObj2:
+myObj2 = null;
+// WeakMap entry automatically removed by GC!
+// No memory leak!
+
+/*
+WeakMap:
+┌────────────────────────┐
+│ weakCache (WeakMap)    │
+│ {id:2} → 'cached data' │ ← Weak reference
+└────────────────────────┘
+
+When {id:2} has no other references:
+- GC can collect it
+- WeakMap entry automatically removed
+*/
+
+// Practical example: Private data storage
+const privateData = new WeakMap();
+
+class SecureStore {
+    constructor(data) {
+        // Store private data using WeakMap
+        privateData.set(this, {
+            data: data,
+            accessCount: 0
+        });
+    }
+    
+    getData() {
+        const private = privateData.get(this);
+        private.accessCount++;
+        return private.data;
+    }
+    
+    getAccessCount() {
+        const private = privateData.get(this);
+        return private.accessCount;
+    }
+}
+
+let store = new SecureStore('secret');
+console.log(store.getData());  // 'secret'
+console.log(store.getAccessCount());  // 1
+
+// When store is no longer referenced:
+store = null;
+// privateData entry automatically removed!
+// No memory leak!
+
+/*
+═══════════════════════════════════════════════════════════
+WEAKSET
+═══════════════════════════════════════════════════════════
+
+Similar to WeakMap but for values only (like Set)
+*/
+
+const visitedNodes = new WeakSet();
+
+function processNode(node) {
+    if (visitedNodes.has(node)) {
+        console.log('Already processed');
+        return;
+    }
+    
+    console.log('Processing node');
+    visitedNodes.add(node);
+    // Process node...
+}
+
+let node1 = { id: 1 };
+let node2 = { id: 2 };
+
+processNode(node1);  // "Processing node"
+processNode(node1);  // "Already processed"
+
+// When nodes are no longer referenced:
+node1 = null;
+node2 = null;
+// WeakSet entries automatically removed!
+
+/*
+═══════════════════════════════════════════════════════════
+MAP/SET VS WEAKMAP/WEAKSET
+═══════════════════════════════════════════════════════════
+
+╔════════════════╦═════════════╦══════════════════╗
+║    Feature     ║   Map/Set   ║ WeakMap/WeakSet  ║
+╠════════════════╬═════════════╬══════════════════╣
+║ Keys/Values    ║ Any type    ║ Objects only     ║
+║ Prevents GC    ║ Yes         ║ No (weak refs)   ║
+║ Iterable       ║ Yes         ║ No               ║
+║ .size          ║ Yes         ║ No               ║
+║ .clear()       ║ Yes         ║ No               ║
+║ Use case       ║ General     ║ Memory-sensitive ║
+╚════════════════╩═════════════╩══════════════════╝
+
+Use Map/Set when:
+- Need to iterate
+- Need to know size
+- Keys might be primitives
+- Want to prevent GC
+
+Use WeakMap/WeakSet when:
+- Keys are objects
+- Don't need iteration
+- Want automatic cleanup
+- Avoiding memory leaks
+- Private data storage
+*/
+```
+
+### **17.4 Memory Profiling**
+
+#### **Using Chrome DevTools:**
+
+```javascript
+/*
+═══════════════════════════════════════════════════════════
+MEMORY PROFILING WITH CHROME DEVTOOLS
+═══════════════════════════════════════════════════════════
+
+Steps:
+1. Open DevTools (F12)
+2. Go to Memory tab
+3. Take heap snapshot
+4. Execute code that might leak
+5. Take another snapshot
+6. Compare snapshots
+
+Example code to profile:
+*/
+
+// Simulate memory leak
+const leakyArray = [];
+
+function createLeak() {
+    for (let i = 0; i < 1000; i++) {
+        leakyArray.push(new Array(1000).fill('data'));
+    }
+}
+
+// Simulate proper cleanup
+let properArray = [];
+
+function createNoLeak() {
+    properArray = [];  // Clear previous
+    for (let i = 0; i < 1000; i++) {
+        properArray.push(new Array(1000).fill('data'));
+    }
+}
+
+/*
+In DevTools:
+
+1. Take Snapshot 1
+2. Click "createLeak" button multiple times
+3. Take Snapshot 2
+4. Compare: Snapshot 2 - Snapshot 1
+
+Results will show:
+- Increased memory usage
+- Retained objects
+- Retention paths (why objects aren't GC'd)
+
+Example retention path:
+Window → leakyArray → Array → ...
+
+This shows leakyArray is preventing GC!
+
+═══════════════════════════════════════════════════════════
+PERFORMANCE.MEMORY API
+═══════════════════════════════════════════════════════════
+*/
+
+if (performance.memory) {
+    console.log('Used JS Heap:', performance.memory.usedJSHeapSize);
+    console.log('Total JS Heap:', performance.memory.totalJSHeapSize);
+    console.log('JS Heap Limit:', performance.memory.jsHeapSizeLimit);
+}
+
+// Monitor memory over time
+function monitorMemory() {
+    setInterval(() => {
+        if (performance.memory) {
+            const used = performance.memory.usedJSHeapSize / 1048576;
+            const total = performance.memory.totalJSHeapSize / 1048576;
+            console.log(`Memory: ${used.toFixed(2)}MB / ${total.toFixed(2)}MB`);
+        }
+    }, 1000);
+}
+
+// monitorMemory();
+
+/*
+═══════════════════════════════════════════════════════════
+MEMORY LEAK DETECTION PATTERNS
+═══════════════════════════════════════════════════════════
+*/
+
+// Pattern 1: Growing arrays/objects
+const metrics = {
+    measurements: []
+};
+
+function recordMetric(value) {
+    metrics.measurements.push({
+        value: value,
+        timestamp: Date.now()
+    });
+    
+    // BAD: Array grows indefinitely!
+    
+    // FIX: Limit size
+    if (metrics.measurements.length > 1000) {
+        metrics.measurements.shift();  // Remove oldest
+    }
+}
+
+// Pattern 2: Event listener accumulation
+function attachListeners() {
+    const button = document.getElementById('btn');
+    
+    // BAD: Adds new listener each time
+    button.addEventListener('click', handleClick);
+}
+
+function handleClick() {
+    console.log('Clicked');
+}
+
+// FIX: Remove old listener first
+function attachListenersProperly() {
+    const button = document.getElementById('btn');
+    
+    // Remove old listener
+    button.removeEventListener('click', handleClick);
+    // Add new listener
+    button.addEventListener('click', handleClick);
+}
+
+// Pattern 3: Forgotten observables/subscriptions
+class DataStream {
+    constructor() {
+        this.subscribers = [];
+    }
+    
+    subscribe(callback) {
+        this.subscribers.push(callback);
+        
+        // Return unsubscribe function
+        return () => {
+            const index = this.subscribers.indexOf(callback);
+            if (index > -1) {
+                this.subscribers.splice(index, 1);
+            }
+        };
+    }
+    
+    emit(data) {
+        this.subscribers.forEach(callback => callback(data));
+    }
+}
+
+const stream = new DataStream();
+
+// BAD: Never unsubscribes
+stream.subscribe(data => {
+    console.log('Received:', data);
+});
+
+// GOOD: Unsubscribe when done
+const unsubscribe = stream.subscribe(data => {
+    console.log('Received:', data);
+});
+
+// Later:
+unsubscribe();  // Clean up!
+```
+
+### **17.5 Optimization Techniques**
+
+#### **Memory Optimization Strategies:**
+
+```javascript
+/*
+═══════════════════════════════════════════════════════════
+TECHNIQUE 1: OBJECT POOLING
+═══════════════════════════════════════════════════════════
+
+Instead of creating/destroying objects repeatedly,
+reuse existing objects from a pool.
+*/
+
+class ObjectPool {
+    constructor(createFn, resetFn, initialSize = 10) {
+        this.createFn = createFn;
+        this.resetFn = resetFn;
+        this.pool = [];
+        
+        // Pre-allocate objects
+        for (let i = 0; i < initialSize; i++) {
+            this.pool.push(this.createFn());
+        }
+    }
+    
+    acquire() {
+        if (this.pool.length > 0) {
+            return this.pool.pop();
+        }
+        return this.createFn();
+    }
+    
+    release(obj) {
+        this.resetFn(obj);
+        this.pool.push(obj);
+    }
+}
+
+// Example: Particle system
+const particlePool = new ObjectPool(
+    () => ({ x: 0, y: 0, vx: 0, vy: 0, life: 0 }),
+    (particle) => {
+        particle.x = 0;
+        particle.y = 0;
+        particle.vx = 0;
+        particle.vy = 0;
+        particle.life = 0;
+    },
+    100
+);
+
+function createParticle(x, y) {
+    const particle = particlePool.acquire();
+    particle.x = x;
+    particle.y = y;
+    particle.vx = Math.random() * 2 - 1;
+    particle.vy = Math.random() * 2 - 1;
+    particle.life = 1;
+    return particle;
+}
+
+function removeParticle(particle) {
+    particlePool.release(particle);
+}
+
+/*
+Benefits:
+- Reduces garbage collection pressure
+- Faster object creation (reuse vs new)
+- Predictable memory usage
+- Good for games/animations
+*/
+
+/*
+═══════════════════════════════════════════════════════════
+TECHNIQUE 2: LAZY INITIALIZATION
+═══════════════════════════════════════════════════════════
+*/
+
+class LazyData {
+    constructor() {
+        // Don't initialize heavy data immediately
+        this._heavyData = null;
+    }
+    
+    getHeavyData() {
+        // Initialize only when first accessed
+        if (this._heavyData === null) {
+            console.log('Initializing heavy data...');
+            this._heavyData = new Array(1000000).fill('data');
+        }
+        return this._heavyData;
+    }
+}
+
+const lazy = new LazyData();
+// No memory used yet
+
+// First access: initializes
+console.log(lazy.getHeavyData().length);  // Initializing...
+
+// Subsequent access: reuses
+console.log(lazy.getHeavyData().length);  // No initialization
+
+/*
+═══════════════════════════════════════════════════════════
+TECHNIQUE 3: DEBOUNCING AND THROTTLING
+═══════════════════════════════════════════════════════════
+*/
+
+// Prevent excessive function calls
+function debounce(fn, delay) {
+    let timeoutId;
+    
+    return function(...args) {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+            fn.apply(this, args);
+        }, delay);
+    };
+}
+
+// Example: Search as user types
+const searchAPI = debounce((query) => {
+    console.log('Searching for:', query);
+    // Make API call
+}, 300);
+
+// Typing: "hello"
+// searchAPI('h')     // Timer started
+// searchAPI('he')    // Timer reset
+// searchAPI('hel')   // Timer reset
+// searchAPI('hell')  // Timer reset
+// searchAPI('hello') // Timer reset
+// ... 300ms later: API call made once!
+
+// Throttling: Limit execution rate
+function throttle(fn, limit) {
+    let inThrottle;
+    
+    return function(...args) {
+        if (!inThrottle) {
+            fn.apply(this, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    };
+}
+
+// Example: Scroll handler
+const handleScroll = throttle(() => {
+    console.log('Scroll position:', window.scrollY);
+}, 100);
+
+window.addEventListener('scroll', handleScroll);
+// Executes at most once per 100ms
+
+/*
+═══════════════════════════════════════════════════════════
+TECHNIQUE 4: MEMOIZATION
+═══════════════════════════════════════════════════════════
+*/
+
+function memoize(fn) {
+    const cache = new Map();
+    
+    return function(...args) {
+        const key = JSON.stringify(args);
+        
+        if (cache.has(key)) {
+            return cache.get(key);
+        }
+        
+        const result = fn.apply(this, args);
+        cache.set(key, result);
+        return result;
+    };
+}
+
+// Expensive function
+function fibonacci(n) {
+    if (n <= 1) return n;
+    return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+const memoizedFib = memoize(fibonacci);
+
+console.time('First call');
+memoizedFib(40);  // Slow
+console.timeEnd('First call');
+
+console.time('Second call');
+memoizedFib(40);  // Instant (cached)
+console.timeEnd('Second call');
+
+/*
+═══════════════════════════════════════════════════════════
+TECHNIQUE 5: VIRTUAL SCROLLING
+═══════════════════════════════════════════════════════════
+
+For large lists, only render visible items
+*/
+
+class VirtualList {
+    constructor(items, itemHeight, containerHeight) {
+        this.items = items;
+        this.itemHeight = itemHeight;
+        this.containerHeight = containerHeight;
+        this.visibleCount = Math.ceil(containerHeight / itemHeight);
+        this.scrollTop = 0;
+    }
+    
+    getVisibleItems() {
+        const startIndex = Math.floor(this.scrollTop / this.itemHeight);
+        const endIndex = startIndex + this.visibleCount;
+        
+        return {
+            items: this.items.slice(startIndex, endIndex),
+            startIndex: startIndex,
+            offsetY: startIndex * this.itemHeight
+        };
+    }
+    
+    onScroll(scrollTop) {
+        this.scrollTop = scrollTop;
+        return this.getVisibleItems();
+    }
+}
+
+// Example: 10,000 items, only render ~20 visible
+const virtualList = new VirtualList(
+    Array.from({ length: 10000 }, (_, i) => `Item ${i}`),
+    50,  // item height
+    1000 // container height
+);
+
+console.log(virtualList.getVisibleItems());
+// Only renders visible items, saves memory!
+
+/*
+═══════════════════════════════════════════════════════════
+BEST PRACTICES SUMMARY
+═══════════════════════════════════════════════════════════
+
+1. ✓ Use object pooling for frequently created/destroyed objects
+2. ✓ Lazy initialize heavy resources
+3. ✓ Debounce/throttle expensive operations
+4. ✓ Memoize pure functions
+5. ✓ Use virtual scrolling for large lists
+6. ✓ WeakMap/WeakSet for metadata storage
+7. ✓ Clear timers and event listeners
+8. ✓ Avoid global variables
+9. ✓ Profile regularly with DevTools
+10. ✓ Monitor memory usage in production
+*/
+```
+
+---
+
+## **18. DEBUGGING EXECUTION CONTEXT**
+
+### **18.1 Chrome DevTools**
+
+#### **Using the Call Stack Panel:**
+
+```javascript
+function outer() {
+    console.log('Outer');
+    middle();
+}
+
+function middle() {
+    console.log('Middle');
+    inner();
+}
+
+function inner() {
+    debugger;  // Execution pauses here
+    console.log('Inner');
+}
+
+outer();
+
+/*
+═══════════════════════════════════════════════════════════
+CHROME DEVTOOLS CALL STACK
+═══════════════════════════════════════════════════════════
+
+When debugger is hit, DevTools shows:
+
+Sources Tab → Call Stack Panel:
+┌────────────────────────────┐
+│ Call Stack                 │
+├────────────────────────────┤
+│ inner (script.js:12)       │ ← Current frame
+│ middle (script.js:8)       │
+│ outer (script.js:4)        │
+│ (anonymous) (script.js:16) │
+└────────────────────────────┘
+
+You can:
+1. Click any frame to inspect its context
+2. See local variables in Scope panel
+3. Step through code
+4. Evaluate expressions in Console
+
+Scope Panel shows:
+┌────────────────────────────┐
+│ Scope                      │
+├────────────────────────────┤
+│ Local                      │
+│   this: Window             │
+│                            │
+│ Closure (middle)           │
+│   (no variables)           │
+│                            │
+│ Closure (outer)            │
+│   (no variables)           │
+│                            │
+│ Global                     │
+│   window: Window           │
+│   document: Document       │
+│   ...                      │
+└────────────────────────────┘
+*/
+```
+
+#### **Inspecting Closures:**
+
+```javascript
+function createCounter() {
+    let count = 0;
+    let name = 'Counter';
+    
+    return {
+        increment: function() {
+            debugger;  // Pause here
+            count++;
+            return count;
+        },
+        
+        getName: function() {
+            return name;
+        }
+    };
+}
+
+const counter = createCounter();
+counter.increment();
+
+/*
+When debugger hits in increment():
+
+Scope Panel:
+┌────────────────────────────┐
+│ Scope                      │
+├────────────────────────────┤
+│ Local                      │
+│   this: Object             │
+│                            │
+│ Closure (createCounter)    │ ← Closure visible!
+│   count: 0                 │
+│   name: 'Counter'          │
+│                            │
+│ Global                     │
+│   window: Window           │
+│   counter: Object          │
+└────────────────────────────┘
+
+You can:
+1. See closure variables
+2. Watch them change
+3. Evaluate expressions using them
+4. Understand scope chain
+*/
+```
+
+### **18.2 Breakpoints and Call Stack**
+
+#### **Types of Breakpoints:**
+
+```javascript
+/*
+═══════════════════════════════════════════════════════════
+BREAKPOINT TYPES
+═══════════════════════════════════════════════════════════
+
+1. LINE BREAKPOINTS
+   - Click line number in Sources
+   - Execution pauses at that line
+
+2. CONDITIONAL BREAKPOINTS
+   - Right-click line number
+   - Add condition (e.g., i === 5)
+   - Pauses only when condition true
+
+3. LOGPOINTS
+   - Right-click line number
+   - Add log message
+   - Logs without pausing
+
+4. DOM BREAKPOINTS
+   - Right-click element in Elements
+   - Break on: subtree modifications, attribute modifications, node removal
+
+5. EVENT LISTENER BREAKPOINTS
+   - Sources → Event Listener Breakpoints
+   - Break when event fires
+
+6. XHR/FETCH BREAKPOINTS
+   - Sources → XHR/fetch Breakpoints
+   - Break on network requests
+*/
+
+// Example: Conditional breakpoint
+function processItems(items) {
+    for (let i = 0; i < items.length; i++) {
+        // Set conditional breakpoint: i === 5
+        console.log(items[i]);
+        processItem(items[i]);
+    }
+}
+
+function processItem(item) {
+    // Process item
+}
+
+processItems([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+// Pauses only when i === 5
+
+// Example: Event listener breakpoint
+document.getElementById('btn').addEventListener('click', function() {
+    console.log('Clicked');
+    handleClick();
+});
+
+function handleClick() {
+    debugger;  // Or set breakpoint here
+    console.log('Handling click');
+}
+
+/*
+═══════════════════════════════════════════════════════════
+STEPPING THROUGH CODE
+═══════════════════════════════════════════════════════════
+
+Controls:
+- Resume (F8): Continue to next breakpoint
+- Step Over (F10): Execute current line, don't enter functions
+- Step Into (F11): Enter function calls
+- Step Out (Shift+F11): Exit current function
+- Step (F9): Step through code
+
+Example:
+*/
+
+function outer() {
+    debugger;  // Start here
+    const a = 1;
+    middle(a);
+    const b = 2;
+}
+
+function middle(x) {
+    const y = x * 2;
+    inner(y);
+}
+
+function inner(z) {
+    console.log(z);
+}
+
+outer();
+
+/*
+Stepping demonstration:
+
+1. Execution pauses at debugger
+   Call Stack: [outer]
+
+2. Press Step Over (F10)
+   Executes: const a = 1
+   Call Stack: [outer]
+   
+3. Press Step Into (F11) on middle(a)
+   Enters middle function
+   Call Stack: [middle, outer]
+   
+4. Press Step Over (F10)
+   Executes: const y = x * 2
+   Call Stack: [middle, outer]
+   
+5. Press Step Into (F11) on inner(y)
+   Enters inner function
+   Call Stack: [inner, middle, outer]
+   
+6. Press Step Out (Shift+F11)
+   Exits inner, back to middle
+   Call Stack: [middle, outer]
+   
+7. Press Step Out again
+   Exits middle, back to outer
+   Call Stack: [outer]
+   
+8. Press Resume (F8)
+   Continues to end
+*/
+```
+
+### **18.3 Scope Inspector**
+
+#### **Inspecting Scope Chain:**
+
+```javascript
+let global = 'global';
+
+function level1() {
+    let var1 = 'level1';
+    
+    function level2() {
+        let var2 = 'level2';
+        
+        function level3() {
+            let var3 = 'level3';
+            debugger;  // Inspect scope here
+            console.log(var3, var2, var1, global);
+        }
+        
+        level3();
+    }
+    
+    level2();
+}
+
+level1();
+
+/*
+═══════════════════════════════════════════════════════════
+SCOPE PANEL AT DEBUGGER
+═══════════════════════════════════════════════════════════
+
+Scope Panel shows complete scope chain:
+┌────────────────────────────────┐
+│ Scope                          │
+├────────────────────────────────┤
+│ Local (level3)                 │
+│   var3: "level3"               │
+│   this: Window                 │
+│                                │
+│ Closure (level2)               │
+│   var2: "level2"               │
+│                                │
+│ Closure (level1)               │
+│   var1: "level1"               │
+│                                │
+│ Script (module scope)          │
+│   global: "global"             │
+│                                │
+│ Global                         │
+│   window: Window               │
+│   document: Document           │
+│   ...                          │
+└────────────────────────────────┘
+
+This visualizes the scope chain we've been discussing!
+
+You can:
+1. Expand each scope level
+2. See all variables in that scope
+3. Watch variables change as you step
+4. Evaluate expressions in any scope
+*/
+```
+
+#### **Watching Scope Changes:**
+
+```javascript
+function demonstrateScopeChanges() {
+    let counter = 0;
+    const items = [];
+    
+    function addItem(item) {
+        debugger;  // Pause before
+        counter++;
+        items.push(item);
+        debugger;  // Pause after
+    }
+    
+    addItem('First');
+    addItem('Second');
+}
+
+demonstrateScopeChanges();
+
+/*
+At first debugger:
+┌────────────────────────────────┐
+│ Local (addItem)                │
+│   item: "First"                │
+│   this: Window                 │
+│                                │
+│ Closure (demonstrateScopeChanges)
+│   counter: 0                   │
+│   items: []                    │
+│   addItem: function            │
+└────────────────────────────────┘
+
+Press Resume
+
+At second debugger:
+┌────────────────────────────────┐
+│ Local (addItem)                │
+│   item: "First"                │
+│   this: Window                 │
+│                                │
+│ Closure (demonstrateScopeChanges)
+│   counter: 1    ← Changed!     │
+│   items: ["First"] ← Changed!  │
+│   addItem: function            │
+└────────────────────────────────┘
+
+You can see exactly how closures preserve and modify state!
+*/
+```
+
+### **18.4 Watch Expressions**
+
+#### **Setting Up Watches:**
+
+```javascript
+function complexCalculation(x, y) {
+    const sum = x + y;
+    const product = x * y;
+    const average = sum / 2;
+    
+    debugger;
+    
+    if (average > 10) {
+        return product;
+    } else {
+        return sum;
+    }
+}
+
+complexCalculation(5, 7);
+
+/*
+═══════════════════════════════════════════════════════════
+WATCH EXPRESSIONS
+═══════════════════════════════════════════════════════════
+
+In DevTools, you can add watch expressions:
+
+Watch Panel:
+┌────────────────────────────────┐
+│ Watch                          │
+├────────────────────────────────┤
+│ + Add expression               │
+│                                │
+│ sum                            │
+│   Value: 12                    │
+│                                │
+│ product                        │
+│   Value: 35                    │
+│                                │
+│ average                        │
+│   Value: 6                     │
+│                                │
+│ average > 10                   │
+│   Value: false                 │
+│                                │
+│ x * y - (x + y)                │
+│   Value: 23                    │
+└────────────────────────────────┘
+
+Watches update as you step through code!
+
+Useful watches:
+- Variable values
+- Complex expressions
+- Conditional checks
+- Function return values
+- Object properties
+*/
+```
+
+### **18.5 Console Methods**
+
+#### **Advanced Console Debugging:**
+
+```javascript
+/*
+═══════════════════════════════════════════════════════════
+CONSOLE METHODS FOR DEBUGGING
+═══════════════════════════════════════════════════════════
+*/
+
+// 1. console.log() - Basic logging
+console.log('Basic message');
+
+// 2. console.dir() - Object inspection
+const obj = { name: 'John', age: 30 };
+console.dir(obj);
+
+// 3. console.table() - Tabular data
+const users = [
+    { name: 'John', age: 30 },
+    { name: 'Jane', age: 25 },
+    { name: 'Bob', age: 35 }
+];
+console.table(users);
+
+// 4. console.trace() - Stack trace
+function a() {
+    b();
+}
+
+function b() {
+    c();
+}
+
+function c() {
+    console.trace('How did I get here?');
+}
+
+a();
+/*
+Output:
+How did I get here?
+c @ script.js:20
+b @ script.js:16
+a @ script.js:12
+(anonymous) @ script.js:23
+*/
+
+// 5. console.time() / console.timeEnd() - Performance
+console.time('Loop');
+for (let i = 0; i < 1000000; i++) {
+    // Some work
+}
+console.timeEnd('Loop');
+// Output: Loop: 10.234ms
+
+// 6. console.count() - Count calls
+function processItem(item) {
+    console.count('processItem called');
+    // Process item
+}
+
+processItem('A');  // processItem called: 1
+processItem('B');  // processItem called: 2
+processItem('C');  // processItem called: 3
+
+// 7. console.group() - Grouped logging
+console.group('User Details');
+console.log('Name: John');
+console.log('Age: 30');
+console.log('Email: john@example.com');
+console.groupEnd();
+
+// 8. console.assert() - Assertions
+function divide(a, b) {
+    console.assert(b !== 0, 'Divisor cannot be zero!');
+    return a / b;
+}
+
+divide(10, 0);  // Assertion failed: Divisor cannot be zero!
+
+// 9. console.clear() - Clear console
+console.clear();
+
+/*
+═══════════════════════════════════════════════════════════
+DEBUGGING EXECUTION CONTEXT WITH CONSOLE
+═══════════════════════════════════════════════════════════
+*/
+
+function demonstrateContext() {
+    console.group('Execution Context');
+    
+    console.log('this:', this);
+    console.log('arguments:', arguments);
+    console.trace('Call stack');
+    
+    const closure = createClosure();
+    closure();
+    
+    console.groupEnd();
+}
+
+function createClosure() {
+    const closureVar = 'closed over';
+    
+    return function() {
+        console.log('Closure variable:', closureVar);
+        console.trace('Closure call stack');
+    };
+}
+
+demonstrateContext(1, 2, 3);
+
+/*
+Output shows:
+- 'this' value
+- arguments object
+- Call stack at each point
+- Closure variables
+- Complete context information
+*/
+```
+
+### **18.6 Performance Profiling**
+
+#### **Profiling Execution:**
+
+```javascript
+/*
+═══════════════════════════════════════════════════════════
+PERFORMANCE PROFILING
+═══════════════════════════════════════════════════════════
+
+DevTools → Performance Tab:
+1. Click Record
+2. Perform actions
+3. Click Stop
+4. Analyze flame graph
+*/
+
+// Example: Find performance bottleneck
+function expensiveOperation() {
+    console.profile('Expensive Operation');
+    
+    const result = [];
+    for (let i = 0; i < 1000000; i++) {
+        result.push(Math.sqrt(i));
+    }
+    
+    console.profileEnd('Expensive Operation');
+    return result;
+}
+
+expensiveOperation();
+
+/*
+Profile shows:
+- Function call times
+- Execution context creation overhead
+- Memory allocations
+- Garbage collection pauses
+
+Flame Graph interpretation:
+┌────────────────────────────────────────┐
+│ (root)                                 │
+├────────────────────────────────────────┤
+│ (program)                              │
+├────────────────────────────────────────┤
+│ expensiveOperation             [90%]   │
+│ ├─ Array.push                 [60%]   │
+│ └─ Math.sqrt                  [30%]   │
+└────────────────────────────────────────┘
+
+Wider = More time spent
+Shows where to optimize!
+
+═══════════════════════════════════════════════════════════
+MEASURING EXECUTION CONTEXT OVERHEAD
+═══════════════════════════════════════════════════════════
+*/
+
+// Test 1: Many function calls (context creation overhead)
+function manyFunctionCalls() {
+    console.time('Many calls');
+    
+    function add(a, b) {
+        return a + b;
+    }
+    
+    let sum = 0;
+    for (let i = 0; i < 1000000; i++) {
+        sum = add(sum, 1);  // Creates context each time
+    }
+    
+    console.timeEnd('Many calls');
+}
+
+// Test 2: Inline operation (no context overhead)
+function inlineOperations() {
+    console.time('Inline');
+    
+    let sum = 0;
+    for (let i = 0; i < 1000000; i++) {
+        sum = sum + 1;  // No function call
+    }
+    
+    console.timeEnd('Inline');
+}
+
+manyFunctionCalls();  // Slower (context overhead)
+inlineOperations();   // Faster (no overhead)
+
+/*
+Results show:
+- Context creation has cost
+- Inline operations faster for hot loops
+- But premature optimization is evil!
+- Profile first, optimize later
+*/
+```
+
+---
+
+# **PART 8: PRACTICAL APPLICATIONS**
+
+## **19. REAL-WORLD SCENARIOS**
+
+### **19.1 Event Handlers and Context**
+
+#### **React Component Patterns:**
+
+```javascript
+// Common React pattern using execution context
+class SearchComponent extends React.Component {
+    constructor(props) {
+        super(props);
+        
+        this.state = {
+            query: '',
+            results: []
+        };
+        
+        // Bind methods in constructor (one-time cost)
+        this.handleInputChange = this.handleInputChange.bind(this);
+        this.handleSearch = this.handleSearch.bind(this);
+        
+        // Or use arrow function (created per instance)
+        this.handleClear = () => {
+            this.setState({ query: '', results: [] });
+        };
+    }
+    
+    handleInputChange(event) {
+        this.setState({ query: event.target.value });
+    }
+    
+    handleSearch() {
+        // Search API call
+        fetch(`/api/search?q=${this.state.query}`)
+            .then(response => response.json())
+            .then(results => {
+                this.setState({ results });
+            });
+    }
+    
+    render() {
+        return (
+            <div>
+                <input
+                    value={this.state.query}
+                    onChange={this.handleInputChange}
+                />
+                <button onClick={this.handleSearch}>Search</button>
+                <button onClick={this.handleClear}>Clear</button>
+            </div>
+        );
+    }
+}
+
+/*
+═══════════════════════════════════════════════════════════
+EXECUTION CONTEXT IN REACT
+═══════════════════════════════════════════════════════════
+
+When button clicked:
+
+Without binding:
+────────────────
+onClick={this.handleSearch}
+→ React calls handleSearch()
+→ 'this' is undefined (strict mode)
+→ ERROR!
+
+With constructor binding:
+─────────────────────────
+this.handleSearch = this.handleSearch.bind(this);
+→ Creates bound function once
+→ 'this' always = component instance
+→ Works! ✓
+
+With arrow function property:
+─────────────────────────────
+this.handleClear = () => { ... };
+→ Arrow function inherits 'this'
+→ 'this' = component instance
+→ Works! ✓
+
+Memory consideration:
+- Constructor binding: One bound function per instance
+- Arrow property: One function per instance
+- Regular method: Shared on prototype
+  (but needs binding for event handlers)
+
+Modern React (Hooks) avoids this issue:
+function SearchComponent() {
+    const [query, setQuery] = useState('');
+    
+    const handleSearch = () => {
+        // No 'this' issues!
+        fetch(`/api/search?q=${query}`)...
+    };
+    
+    return <button onClick={handleSearch}>Search</button>;
+}
+*/
+```
+
+### **19.2 AJAX Callbacks**
+
+#### **Callback Management:**
+
+```javascript
+// Old pattern: Callback hell
+function fetchUserData(userId, callback) {
+    $.ajax({
+        url: `/api/users/${userId}`,
+        success: function(user) {
+            $.ajax({
+                url: `/api/posts/${user.id}`,
+                success: function(posts) {
+                    $.ajax({
+                        url: `/api/comments/${posts[0].id}`,
+                        success: function(comments) {
+                            callback(null, { user, posts, comments });
+                        },
+                        error: function(err) {
+                            callback(err);
+                        }
+                    });
+                },
+                error: function(err) {
+                    callback(err);
+                }
+            });
+        },
+        error: function(err) {
+            callback(err);
+        }
+    });
+}
+
+/*
+Execution context issues:
+1. Each callback creates new context
+2. Error handling duplicated
+3. 'this' can be lost
+4. Hard to read and maintain
+*/
+
+// Modern pattern: Promises
+function fetchUserData(userId) {
+    return fetch(`/api/users/${userId}`)
+        .then(response => response.json())
+        .then(user => {
+            return fetch(`/api/posts/${user.id}`)
+                .then(response => response.json())
+                .then(posts => ({ user, posts }));
+        })
+        .then(({ user, posts }) => {
+            return fetch(`/api/comments/${posts[0].id}`)
+                .then(response => response.json())
+                .then(comments => ({ user, posts, comments }));
+        });
+}
+
+// Better: async/await
+async function fetchUserDataAsync(userId) {
+    const userResponse = await fetch(`/api/users/${userId}`);
+    const user = await userResponse.json();
+    
+    const postsResponse = await fetch(`/api/posts/${user.id}`);
+    const posts = await postsResponse.json();
+    
+    const commentsResponse = await fetch(`/api/comments/${posts[0].id}`);
+    const comments = await commentsResponse.json();
+    
+    return { user, posts, comments };
+}
+
+/*
+═══════════════════════════════════════════════════════════
+EXECUTION CONTEXT BENEFITS
+═══════════════════════════════════════════════════════════
+
+Async/await:
+✓ Single execution context (suspended/resumed)
+✓ Clean error handling (try/catch)
+✓ Sequential code (easier to read)
+✓ 'this' preserved across awaits
+✓ Variables persist between awaits
+
+Compare execution:
+
+Callback style:
+- 4+ execution contexts created
+- Context switches at each callback
+- Complex error handling
+
+Async/await style:
+- 1 execution context (suspended 3 times)
+- Linear flow
+- Simple error handling
+*/
+```
+
+### **19.3 React Component Methods**
+
+#### **Component Lifecycle and Context:**
+
+```javascript
+class DataComponent extends React.Component {
+    constructor(props) {
+        super(props);
+        
+        this.state = {
+            data: null,
+            loading: false,
+            error: null
+        };
+        
+        // Instance properties (closure-based caching)
+        this.cache = new Map();
+        this.abortController = null;
+    }
+    
+    componentDidMount() {
+        // Execution context: method call from React
+        // 'this' = component instance
+        this.fetchData();
+    }
+    
+    componentDidUpdate(prevProps) {
+        if (prevProps.id !== this.props.id) {
+            this.fetchData();
+        }
+    }
+    
+    componentWillUnmount() {
+        // Cleanup: abort pending requests
+        if (this.abortController) {
+            this.abortController.abort();
+        }
+    }
+    
+    fetchData = async () => {
+        const { id } = this.props;
+        
+        // Check cache (closure over this.cache)
+        if (this.cache.has(id)) {
+            this.setState({ data: this.cache.get(id) });
+            return;
+        }
+        
+        // Create abort controller
+        this.abortController = new AbortController();
+        
+        this.setState({ loading: true });
+        
+        try {
+            const response = await fetch(`/api/data/${id}`, {
+                signal: this.abortController.signal
+            });
+            
+            const data = await response.json();
+            
+            // Cache result
+            this.cache.set(id, data);
+            
+            this.setState({
+                data,
+                loading: false,
+                error: null
+            });
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                this.setState({
+                    loading: false,
+                    error: error.message
+                });
+            }
+        }
+    }
+    
+    render() {
+        const { data, loading, error } = this.state;
+        
+        if (loading) return <div>Loading...</div>;
+        if (error) return <div>Error: {error}</div>;
+        if (!data) return null;
+        
+        return <div>{data.content}</div>;
+    }
+}
+
+/*
+═══════════════════════════════════════════════════════════
+EXECUTION CONTEXT LIFECYCLE
+═══════════════════════════════════════════════════════════
+
+1. Component Mount:
+   ┌────────────────────────────────┐
+   │ constructor() EC               │
+   │ this: component instance       │
+   │ Creates: cache, abortController│
+   └────────────────────────────────┘
+   
+   ┌────────────────────────────────┐
+   │ componentDidMount() EC         │
+   │ this: component instance       │
+   │ Calls: fetchData()             │
+   └────────────────────────────────┘
+   
+   ┌────────────────────────────────┐
+   │ fetchData() EC (async)         │
+   │ this: component instance       │ ← Arrow function!
+   │ Suspends at await              │
+   │ Context preserved              │
+   └────────────────────────────────┘
+
+2. Component Update:
+   ┌────────────────────────────────┐
+   │ componentDidUpdate() EC        │
+   │ Check if props changed         │
+   │ May call fetchData() again     │
+   └────────────────────────────────┘
+
+3. Component Unmount:
+   ┌────────────────────────────────┐
+   │ componentWillUnmount() EC      │
+   │ Cleanup: abort requests        │
+   │ Cache persists until GC        │
+   └────────────────────────────────┘
+
+Arrow function benefits:
+- fetchData = async () => { ... }
+- 'this' automatically bound
+- No manual binding needed
+- Safe to pass as callback
+- Each instance gets own function
+  (slight memory cost, big convenience)
+*/
+```
+
+### **19.4 Node.js and Global Context**
+
+#### **Node.js Module Scope:**
+
+```javascript
+// app.js (Node.js module)
+console.log('Global this:', this);  // {}
+console.log('Are they equal?', this === module.exports);  // true
+
+var moduleVar = 'module scoped';
+global.globalVar = 'truly global';
+
+function moduleFunction() {
+    console.log('Function this:', this);  // undefined (strict mode)
+}
+
+moduleFunction();
+
+/*
+═══════════════════════════════════════════════════════════
+NODE.JS MODULE EXECUTION CONTEXT
+═══════════════════════════════════════════════════════════
+
+Node.js wraps each module:
+(function(exports, require, module, __filename, __dirname) {
+    // Your module code here
+    var moduleVar = 'module scoped';
+});
+
+Module Execution Context:
+{
+    ThisBinding: module.exports,  ← Not global!
+    
+    LexicalEnvironment: {
+        moduleVar: 'module scoped',
+        moduleFunction: <function>,
+        exports: module.exports,
+        require: <function>,
+        module: <module object>,
+        __filename: '/path/to/app.js',
+        __dirname: '/path/to'
+    },
+    
+    outer: null  ← No outer scope (module is top-level)
+}
+
+Key differences from browser:
+1. Top-level 'this' = module.exports (not global)
+2. Variables don't leak to global
+3. Each module has own scope
+4. Require caches modules
+
+To access true global:
+- Use 'global' object
+- global.myVar = value
+
+To share between modules:
+- Use module.exports / exports
+- Or attach to global (not recommended)
+*/
+
+// Example: Module pattern in Node.js
+// counter.js
+let count = 0;  // Private to module
+
+function increment() {
+    return ++count;
+}
+
+function getCount() {
+    return count;
+}
+
+module.exports = {
+    increment,
+    getCount
+};
+
+// app.js
+const counter = require('./counter');
+
+console.log(counter.increment());  // 1
+console.log(counter.increment());  // 2
+console.log(counter.getCount());   // 2
+
+// count is not accessible
+console.log(counter.count);  // undefined
+
+/*
+Module closure:
+┌────────────────────────────────┐
+│ counter.js Module Scope        │
+│ (Private)                      │
+│                                │
+│ count: 2                       │
+│ increment: <function>          │
+│ getCount: <function>           │
+│                                │
+│ Only exported functions        │
+│ can access 'count'             │
+└────────────────────────────────┘
+
+Benefits:
+✓ True private variables
+✓ No global pollution
+✓ Each module independent
+✓ Clean dependency management
+*/
+```
+
+### **19.5 Web Workers**
+
+#### **Worker Execution Context:**
+
+```javascript
+// main.js (main thread)
+const worker = new Worker('worker.js');
+
+worker.postMessage({ type: 'START', data: [1, 2, 3, 4, 5] });
+
+worker.onmessage = function(event) {
+    console.log('Result from worker:', event.data);
+};
+
+// worker.js (worker thread)
+self.onmessage = function(event) {
+    const { type, data } = event.data;
+    
+    if (type === 'START') {
+        const result = processData(data);
+        self.postMessage(result);
+    }
+};
+
+function processData(data) {
+    // Heavy computation in separate context
+    return data.reduce((sum, n) => sum + n, 0);
+}
+
+/*
+═══════════════════════════════════════════════════════════
+WEB WORKER EXECUTION CONTEXT
+═══════════════════════════════════════════════════════════
+
+Main Thread Context:
+┌────────────────────────────────┐
+│ Global Execution Context       │
+│ this: window                   │
+│ Access: DOM, window, document  │
+│ worker: Worker object          │
+└────────────────────────────────┘
+
+Worker Thread Context:
+┌────────────────────────────────┐
+│ Worker Global Scope            │
+│ this: WorkerGlobalScope        │
+│ self: WorkerGlobalScope        │
+│ NO access to: DOM, window      │
+│ Access: importScripts, postMessage
+└────────────────────────────────┘
+
+Key points:
+1. Separate execution contexts
+2. Separate memory spaces
+3. Communication via messages only
+4. No shared variables
+5. No DOM access in worker
+
+Message passing:
+Main → Worker: worker.postMessage(data)
+Worker → Main: self.postMessage(data)
+
+Both create new execution contexts when handlers called.
+
+Use cases:
+- Heavy computations
+- Image processing
+- Large data processing
+- Anything that would block UI
+*/
+```
+
+### **19.6 Service Workers**
+
+#### **Service Worker Context:**
+
+```javascript
+// main.js (register service worker)
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+        .then(registration => {
+            console.log('SW registered:', registration);
+        });
+}
+
+// sw.js (service worker)
+self.addEventListener('install', (event) => {
+    console.log('SW installed');
+    
+    event.waitUntil(
+        caches.open('v1').then(cache => {
+            return cache.addAll([
+                '/',
+                '/styles.css',
+                '/script.js'
+            ]);
+        })
+    );
+});
+
+self.addEventListener('fetch', (event) => {
+    event.respondWith(
+        caches.match(event.request)
+            .then(response => {
+                return response || fetch(event.request);
+            })
+    );
+});
+
+/*
+═══════════════════════════════════════════════════════════
+SERVICE WORKER EXECUTION CONTEXT
+═══════════════════════════════════════════════════════════
+
+Service Worker Context:
+┌────────────────────────────────┐
+│ ServiceWorkerGlobalScope       │
+│ this: ServiceWorkerGlobalScope │
+│ self: ServiceWorkerGlobalScope │
+│ NO access to: DOM, window      │
+│ Access:                        │
+│  - caches API                  │
+│  - fetch API                   │
+│  - IndexedDB                   │
+│  - postMessage                 │
+└────────────────────────────────┘
+
+Lifecycle:
+1. Install: SW script executed
+   - One-time setup
+   - Cache static assets
+   - Execution context created
+
+2. Activate: SW takes control
+   - Clean old caches
+   - Execution context for handler
+
+3. Fetch: Intercept network requests
+   - New execution context per request
+   - Can serve from cache
+   - Or proxy to network
+
+4. Terminate: SW stopped
+   - Contexts destroyed
+   - Will restart on next event
+
+Key characteristics:
+- Runs in separate thread
+- Event-driven
+- Can be terminated anytime
+- Must be stateless (use cache/IndexedDB)
+- HTTPS required (or localhost)
+
+Cannot rely on global state:
+let counter = 0;  // DON'T DO THIS
+
+self.addEventListener('fetch', () => {
+    counter++;  // Might be reset!
+});
+
+Use persistent storage instead:
+self.addEventListener('fetch', async () => {
+    const cache = await caches.open('data');
+    let counter = await cache.match('counter');
+    counter = counter ? parseInt(counter) + 1 : 1;
+    await cache.put('counter', counter);
+});
+*/
+```
+
+---
+
+## **20. COMMON PATTERNS AND ANTI-PATTERNS**
+
+### **20.1 Best Practices**
+
+#### **Modern JavaScript Patterns:**
+
+```javascript
+/*
+═══════════════════════════════════════════════════════════
+PATTERN 1: MODULE PATTERN (ES6 MODULES)
+═══════════════════════════════════════════════════════════
+*/
+
+// utils.js
+const API_KEY = 'secret-key';  // Private
+
+function privateHelper(data) {
+    return data.map(item => item * 2);
+}
+
+export function publicMethod(data) {
+    return privateHelper(data);
+}
+
+export const PUBLIC_CONSTANT = 42;
+
+// app.js
+import { publicMethod, PUBLIC_CONSTANT } from './utils.js';
+
+console.log(publicMethod([1, 2, 3]));  // [2, 4, 6]
+console.log(PUBLIC_CONSTANT);          // 42
+// Cannot access API_KEY or privateHelper
+
+/*
+Benefits:
+✓ True encapsulation
+✓ Clear public API
+✓ Tree-shaking support
+✓ Static analysis
+✓ Standard syntax
+
+═══════════════════════════════════════════════════════════
+PATTERN 2: FACTORY FUNCTIONS
+═══════════════════════════════════════════════════════════
+*/
+
+function createUser(name, email) {
+    // Private state
+    let loginCount = 0;
+    const id = Math.random().toString(36);
+    
+    // Validate email (private)
+    function validateEmail(email) {
+        return email.includes('@');
+    }
+    
+    // Public API
+    return {
+        getName() {
+            return name;
+        },
+        
+        getEmail() {
+            return email;
+        },
+        
+        setEmail(newEmail) {
+            if (validateEmail(newEmail)) {
+                email = newEmail;
+                return true;
+            }
+            return false;
+        },
+        
+        login() {
+            loginCount++;
+            return {
+                id,
+                loginCount,
+                timestamp: Date.now()
+            };
+        }
+    };
+}
+
+const user = createUser('John', 'john@example.com');
+console.log(user.getName());  // "John"
+console.log(user.login());    // { id: '...', loginCount: 1, ... }
+
+/*
+Benefits:
+✓ No 'new' keyword needed
+✓ Private variables via closure
+✓ Flexible initialization
+✓ Easy to test
+✓ No 'this' confusion
+
+═══════════════════════════════════════════════════════════
+PATTERN 3: DEPENDENCY INJECTION
+═══════════════════════════════════════════════════════════
+*/
+
+// Good: Dependencies injected
+function createUserService(database, logger) {
+    return {
+        async getUser(id) {
+            logger.info(`Fetching user ${id}`);
+            return await database.query('SELECT * FROM users WHERE id = ?', [id]);
+        },
+        
+        async createUser(userData) {
+            logger.info('Creating user');
+            return await database.insert('users', userData);
+        }
+    };
+}
+
+// Easy to test with mocks
+const mockDb = {
+    query: async () => ({ id: 1, name: 'Test' }),
+    insert: async () => ({ id: 2 })
+};
+
+const mockLogger = {
+    info: (msg) => console.log('[TEST]', msg)
+};
+
+const userService = createUserService(mockDb, mockLogger);
+
+/*
+Benefits:
+✓ Testable (inject mocks)
+✓ Flexible (swap implementations)
+✓ Clear dependencies
+✓ No global state
+✓ Reusable
+
+═══════════════════════════════════════════════════════════
+PATTERN 4: ASYNC/AWAIT ERROR HANDLING
+═══════════════════════════════════════════════════════════
+*/
+
+async function fetchWithRetry(url, options = {}, retries = 3) {
+    const { timeout = 5000, ...fetchOptions } = options;
+    
+    for (let i = 0; i < retries; i++) {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeout);
+            
+            const response = await fetch(url, {
+                ...fetchOptions,
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            return await response.json();
+            
+        } catch (error) {
+            if (i === retries - 1) {
+                throw error;
+            }
+            
+            console.log(`Retry ${i + 1}/${retries}:`, error.message);
+            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+        }
+    }
+}
+
+// Usage
+try {
+    const data = await fetchWithRetry('https://api.example.com/data', {
+        timeout: 3000
+    }, 3);
+    
+    console.log(data);
+} catch (error) {
+    console.error('Failed after retries:', error);
+}
+
+/*
+Benefits:
+✓ Clean error handling
+✓ Automatic retry logic
+✓ Timeout support
+✓ Abort support
+✓ Linear flow
+
+═══════════════════════════════════════════════════════════
+PATTERN 5: COMPOSITION OVER INHERITANCE
+═══════════════════════════════════════════════════════════
+*/
+
+// Bad: Deep inheritance
+class Animal { }
+class Mammal extends Animal { }
+class Dog extends Mammal { }
+class Labrador extends Dog { }  // Too deep!
+
+// Good: Composition
+const canEat = (state) => ({
+    eat(food) {
+        console.log(`Eating ${food}`);
+        state.energy += 10;
+    }
+});
+
+const canWalk = (state) => ({
+    walk(distance) {
+        console.log(`Walking ${distance}m`);
+        state.energy -= distance * 0.1;
+    }
+});
+
+const canBark = (state) => ({
+    bark() {
+        console.log('Woof!');
+    }
+});
+
+function createDog(name) {
+    const state = {
+        name,
+        energy: 100
+    };
+    
+    return Object.assign(
+        {},
+        canEat(state),
+        canWalk(state),
+        canBark(state),
+        {
+            getState() {
+                return { ...state };
+            }
+        }
+    );
+}
+
+const dog = createDog('Buddy');
+dog.eat('food');
+dog.walk(50);
+dog.bark();
+console.log(dog.getState());
+
+/*
+Benefits:
+✓ Flexible composition
+✓ No fragile base class
+✓ Easy to test pieces
+✓ Clear capabilities
+✓ Avoids deep hierarchies
+*/
+```
+
+### **20.2 Code Smells**
+
+#### **Anti-Patterns to Avoid:**
+
+```javascript
+/*
+═══════════════════════════════════════════════════════════
+ANTI-PATTERN 1: GLOBAL VARIABLES
+═══════════════════════════════════════════════════════════
+*/
+
+// BAD
+var userData;
+var isLoggedIn;
+var currentPage;
+
+function login(credentials) {
+    // Modifies global state
+    userData = fetchUser(credentials);
+    isLoggedIn = true;
+}
+
+function navigate(page) {
+    currentPage = page;
+}
+
+/*
+Problems:
+✗ Naming conflicts
+✗ Hard to test
+✗ Tight coupling
+✗ Memory leaks
+✗ Race conditions
+✗ Unpredictable state
+
+GOOD: Module or class
+*/
+
+class AppState {
+    constructor() {
+        this.userData = null;
+        this.isLoggedIn = false;
+        this.currentPage = null;
+    }
+    
+    async login(credentials) {
+        this.userData = await fetchUser(credentials);
+        this.isLoggedIn = true;
+    }
+    
+    navigate(page) {
+        this.currentPage = page;
+    }
+    
+    getState() {
+        return {
+            userData: this.userData,
+            isLoggedIn: this.isLoggedIn,
+            currentPage: this.currentPage
+        };
+    }
+}
+
+const appState = new AppState();
+
+/*
+═══════════════════════════════════════════════════════════
+ANTI-PATTERN 2: CALLBACK HELL
+═══════════════════════════════════════════════════════════
+*/
+
+// BAD
+function getUserData(userId, callback) {
+    getUser(userId, function(err, user) {
+        if (err) return callback(err);
+        
+        getPosts(user.id, function(err, posts) {
+            if (err) return callback(err);
+            
+            getComments(posts[0].id, function(err, comments) {
+                if (err) return callback(err);
+                
+                callback(null, { user, posts, comments });
+            });
+        });
+    });
+}
+
+/*
+Problems:
+✗ Hard to read
+✗ Error handling duplicated
+✗ Hard to debug
+✗ Hard to test
+✗ Execution context confusion
+
+GOOD: async/await
+*/
+
+async function getUserData(userId) {
+    try {
+        const user = await getUser(userId);
+        const posts = await getPosts(user.id);
+        const comments = await getComments(posts[0].id);
+        
+        return { user, posts, comments };
+    } catch (error) {
+        console.error('Error fetching user data:', error);
+        throw error;
+    }
+}
+
+/*
+═══════════════════════════════════════════════════════════
+ANTI-PATTERN 3: MODIFYING INPUT PARAMETERS
+═══════════════════════════════════════════════════════════
+*/
+
+// BAD
+function addItem(array, item) {
+    array.push(item);  // Mutates input!
+    return array;
+}
+
+const myArray = [1, 2, 3];
+const newArray = addItem(myArray, 4);
+console.log(myArray);  // [1, 2, 3, 4] - Modified!
+
+/*
+Problems:
+✗ Unexpected side effects
+✗ Hard to track changes
+✗ Not functional
+✗ Breaks immutability
+✗ Race conditions
+
+GOOD: Return new array
+*/
+
+function addItem(array, item) {
+    return [...array, item];  // New array
+}
+
+const myArray = [1, 2, 3];
+const newArray = addItem(myArray, 4);
+console.log(myArray);    // [1, 2, 3] - Unchanged ✓
+console.log(newArray);   // [1, 2, 3, 4] - New array ✓
+
+/*
+═══════════════════════════════════════════════════════════
+ANTI-PATTERN 4: LONG FUNCTIONS
+═══════════════════════════════════════════════════════════
+*/
+
+// BAD
+function processOrder(order) {
+    // 200 lines of code doing everything
+    // Validation
+    // Calculation
+    // Database update
+    // Email sending
+    // Logging
+    // etc.
+}
+
+/*
+Problems:
+✗ Hard to understand
+✗ Hard to test
+✗ Hard to maintain
+✗ Multiple responsibilities
+✗ Large execution context
+
+GOOD: Small, focused functions
+*/
+
+function processOrder(order) {
+    validateOrder(order);
+    const total = calculateTotal(order);
+    const savedOrder = saveOrder(order, total);
+    sendConfirmationEmail(savedOrder);
+    logOrderProcessed(savedOrder);
+    return savedOrder;
+}
+
+function validateOrder(order) {
+    if (!order.items || order.items.length === 0) {
+        throw new Error('Order must have items');
+    }
+    // More validation
+}
+
+function calculateTotal(order) {
+    return order.items.reduce((sum, item) => {
+        return sum + (item.price * item.quantity);
+    }, 0);
+}
+
+// etc...
+
+/*
+═══════════════════════════════════════════════════════════
+ANTI-PATTERN 5: INAPPROPRIATE INTIMACY
+═══════════════════════════════════════════════════════════
+*/
+
+// BAD
+class Order {
+    constructor() {
+        this.items = [];
+    }
+}
+
+class OrderProcessor {
+    process(order) {
+        // Directly accessing internals
+        order.items.push(newItem);
+        order.total = this.calculateTotal(order.items);
+        order.status = 'processed';
+    }
+}
+
+/*
+Problems:
+✗ Tight coupling
+✗ Breaks encapsulation
+✗ Hard to change Order class
+✗ No validation
+
+GOOD: Use methods
+*/
+
+class Order {
+    constructor() {
+        this.items = [];
+        this.total = 0;
+        this.status = 'pending';
+    }
+    
+    addItem(item) {
+        this.items.push(item);
+        this.recalculateTotal();
+    }
+    
+    recalculateTotal() {
+        this.total = this.items.reduce((sum, item) => {
+            return sum + (item.price * item.quantity);
+        }, 0);
+    }
+    
+    markAsProcessed() {
+        this.status = 'processed';
+    }
+    
+    getItems() {
+        return [...this.items];  // Return copy
+    }
+}
+
+class OrderProcessor {
+    process(order) {
+        order.markAsProcessed();
+        // Uses public API only
+    }
+}
+```
+
+### **20.3 Refactoring Examples**
+
+#### **Before and After:**
+
+```javascript
+/*
+═══════════════════════════════════════════════════════════
+REFACTOR 1: FROM GLOBAL TO MODULE
+═══════════════════════════════════════════════════════════
+*/
+
+// BEFORE: Global variables and functions
+var userList = [];
+var currentUser = null;
+
+function addUser(user) {
+    userList.push(user);
+}
+
+function removeUser(userId) {
+    userList = userList.filter(u => u.id !== userId);
+}
+
+function setCurrentUser(user) {
+    currentUser = user;
+}
+
+/*
+Problems:
+- Global namespace pollution
+- No encapsulation
+- Anyone can modify userList directly
+- Hard to test
+*/
+
+// AFTER: Module with closure
+const UserManager = (function() {
+    // Private state
+    let userList = [];
+    let currentUser = null;
+    
+    // Private helper
+    function findUserIndex(userId) {
+        return userList.findIndex(u => u.id === userId);
+    }
+    
+    // Public API
+    return {
+        addUser(user) {
+            if (!user || !user.id) {
+                throw new Error('Invalid user');
+            }
+            userList.push(user);
+        },
+        
+        removeUser(userId) {
+            const index = findUserIndex(userId);
+            if (index !== -1) {
+                userList.splice(index, 1);
+                return true;
+            }
+            return false;
+        },
+        
+        setCurrentUser(user) {
+            currentUser = user;
+        },
+        
+        getCurrentUser() {
+            return currentUser;
+        },
+        
+        getUserList() {
+            return [...userList];  // Return copy
+        }
+    };
+})();
+
+/*
+Benefits:
+✓ Encapsulation
+✓ Single global (UserManager)
+✓ Validation
+✓ Cannot access privates
+✓ Easy to test
+
+═══════════════════════════════════════════════════════════
+REFACTOR 2: FROM CALLBACK TO ASYNC/AWAIT
+═══════════════════════════════════════════════════════════
+*/
+
+// BEFORE: Callback-based
+function loadUserData(userId, onSuccess, onError) {
+    fetchUser(userId, function(err, user) {
+        if (err) return onError(err);
+        
+        fetchUserPosts(user.id, function(err, posts) {
+            if (err) return onError(err);
+            
+            fetchUserSettings(user.id, function(err, settings) {
+                if (err) return onError(err);
+                
+                onSuccess({
+                    user: user,
+                    posts: posts,
+                    settings: settings
+                });
+            });
+        });
+    });
+}
+
+// Usage
+loadUserData(
+    123,
+    function(data) {
+        console.log('Success:', data);
+    },
+    function(err) {
+        console.error('Error:', err);
+    }
+);
+
+/*
+Problems:
+- Callback hell
+- Error handling duplicated
+- Hard to read
+- Hard to compose
+- Execution context confusion
+*/
+
+// AFTER: async/await
+async function loadUserData(userId) {
+    const user = await fetchUser(userId);
+    const posts = await fetchUserPosts(user.id);
+    const settings = await fetchUserSettings(user.id);
+    
+    return {
+        user,
+        posts,
+        settings
+    };
+}
+
+// Usage
+try {
+    const data = await loadUserData(123);
+    console.log('Success:', data);
+} catch (err) {
+    console.error('Error:', err);
+}
+
+/*
+Benefits:
+✓ Linear flow
+✓ Single error handling
+✓ Easy to read
+✓ Easy to compose
+✓ Single execution context (suspended)
+✓ Variables persist across awaits
+
+═══════════════════════════════════════════════════════════
+REFACTOR 3: FROM CLASS TO FACTORY
+═══════════════════════════════════════════════════════════
+*/
+
+// BEFORE: Class with public properties
+class BankAccount {
+    constructor(initialBalance) {
+        this.balance = initialBalance;  // Public!
+        this.transactions = [];         // Public!
+    }
+    
+    deposit(amount) {
+        this.balance += amount;
+        this.transactions.push({ type: 'deposit', amount });
+    }
+    
+    withdraw(amount) {
+        if (amount <= this.balance) {
+            this.balance -= amount;
+            this.transactions.push({ type: 'withdraw', amount });
+            return true;
+        }
+        return false;
+    }
+    
+    getBalance() {
+        return this.balance;
+    }
+}
+
+const account = new BankAccount(1000);
+account.balance = 1000000;  // Oops! No validation!
+
+/*
+Problems:
+- Public properties
+- No true encapsulation
+- Can bypass validation
+- Direct property access
+*/
+
+// AFTER: Factory function with closures
+function createBankAccount(initialBalance) {
+    // Private state
+    let balance = initialBalance;
+    let transactions = [];
+    
+    // Private validation
+    function validateAmount(amount) {
+        return typeof amount === 'number' && amount > 0;
+    }
+    
+    // Public API
+    return {
+        deposit(amount) {
+            if (!validateAmount(amount)) {
+                throw new Error('Invalid amount');
+            }
+            
+            balance += amount;
+            transactions.push({ type: 'deposit', amount, balance });
+            return balance;
+        },
+        
+        withdraw(amount) {
+            if (!validateAmount(amount)) {
+                throw new Error('Invalid amount');
+            }
+            
+            if (amount > balance) {
+                throw new Error('Insufficient funds');
+            }
+            
+            balance -= amount;
+            transactions.push({ type: 'withdraw', amount, balance });
+            return balance;
+        },
+        
+        getBalance() {
+            return balance;
+        },
+        
+        getTransactions() {
+            return [...transactions];  // Return copy
+        }
+    };
+}
+
+const account = createBankAccount(1000);
+// account.balance = 1000000;  // Not possible! ✓
+account.deposit(500);  // Only way to modify
+
+/*
+Benefits:
+✓ True privacy
+✓ Validation enforced
+✓ Cannot bypass methods
+✓ Clean API
+✓ Easy to test
+*/
+```
+
+---
+
+## **21. INTERVIEW QUESTIONS AND ANSWERS**
+
+### **21.1 Beginner Level**
+
+#### **Q1: What is execution context?**
+
+```javascript
+/*
+ANSWER:
+
+Execution context is an environment in which JavaScript code is
+evaluated and executed. It contains:
+1. Variables and functions
+2. Scope chain
+3. 'this' value
+
+Example:
+*/
+
+function greet(name) {
+    const message = `Hello, ${name}`;
+    console.log(message);
+}
+
+greet('John');
+
+/*
+When greet() is called:
+1. New execution context created
+2. 'name' parameter = 'John'
+3. 'message' variable created
+4. Function body executed
+5. Context destroyed after return
+
+Visual:
+┌──────────────────────────────┐
+│ greet() Execution Context    │
+├──────────────────────────────┤
+│ Variables:                   │
+│   name: 'John'               │
+│   message: 'Hello, John'     │
+│ Scope: access to global      │
+│ 'this': global/undefined     │
+└──────────────────────────────┘
+*/
+```
+
+#### **Q2: What is the difference between var, let, and const?**
+
+```javascript
+/*
+ANSWER:
+
+╔════════════════╦═══════════╦═══════════╦═══════════╗
+║   Feature      ║    var    ║    let    ║   const   ║
+╠════════════════╬═══════════╬═══════════╬═══════════╣
+║ Scope          ║ Function  ║   Block   ║   Block   ║
+║ Hoisting       ║    Yes    ║    Yes    ║    Yes    ║
+║ Initialized    ║ undefined ║    TDZ    ║    TDZ    ║
+║ Reassignable   ║    Yes    ║    Yes    ║    No     ║
+║ Redeclarable   ║    Yes    ║    No     ║    No     ║
+╚════════════════╩═══════════╩═══════════╩═══════════╝
+*/
+
+// Scope
+function scopeDemo() {
+    if (true) {
+        var functionScoped = 'var';
+        let blockScoped = 'let';
+        const alsoBlockScoped = 'const';
+    }
+    
+    console.log(functionScoped);  // ✓ Works
+    // console.log(blockScoped);   // ✗ ReferenceError
+    // console.log(alsoBlockScoped); // ✗ ReferenceError
+}
+
+// Hoisting
+console.log(varVariable);   // undefined
+// console.log(letVariable); // ReferenceError (TDZ)
+
+var varVariable = 'var';
+let letVariable = 'let';
+
+// Reassignment
+var v = 1;
+v = 2;  // ✓ Works
+
+let l = 1;
+l = 2;  // ✓ Works
+
+const c = 1;
+// c = 2;  // ✗ TypeError
+
+// Redeclaration
+var v = 1;
+var v = 2;  // ✓ Works
+
+let l = 1;
+// let l = 2;  // ✗ SyntaxError
+
+const c = 1;
+// const c = 2;  // ✗ SyntaxError
+```
+
+#### **Q3: What is hoisting?**
+
+```javascript
+/*
+ANSWER:
+
+Hoisting is JavaScript's behavior of moving declarations to the
+top of their scope during the creation phase of execution context.
+*/
+
+// Example 1: var hoisting
+console.log(myVar);  // undefined (not ReferenceError!)
+var myVar = 5;
+console.log(myVar);  // 5
+
+// How JavaScript interprets it:
+var myVar;           // Declaration hoisted
+console.log(myVar);  // undefined
+myVar = 5;          // Assignment stays
+console.log(myVar);  // 5
+
+// Example 2: function hoisting
+greet();  // "Hello!" - Works before declaration!
+
+function greet() {
+    console.log("Hello!");
+}
+
+// Function declarations are fully hoisted
+
+// Example 3: let/const hoisting
+// console.log(myLet);  // ReferenceError
+let myLet = 10;
+
+// let and const ARE hoisted but remain in TDZ
+// (Temporal Dead Zone) until declaration
+
+/*
+Key points:
+- var: Hoisted and initialized to undefined
+- let/const: Hoisted but in TDZ
+- function declarations: Fully hoisted
+- function expressions: Follow variable rules
+*/
+```
+
+#### **Q4: What is a closure?**
+
+```javascript
+/*
+ANSWER:
+
+A closure is a function that has access to variables from its
+outer (enclosing) scope, even after the outer function has returned.
+*/
+
+function createCounter() {
+    let count = 0;  // Private variable
+    
+    return function() {
+        count++;
+        return count;
+    };
+}
+
+const counter = createCounter();
+console.log(counter());  // 1
+console.log(counter());  // 2
+console.log(counter());  // 3
+
+// 'count' is still accessible even though
+// createCounter() has finished executing!
+
+/*
+How it works:
+
+1. createCounter() executes
+2. Creates 'count' variable
+3. Returns inner function
+4. createCounter() finishes
+5. Normally, 'count' would be garbage collected
+6. BUT inner function still references 'count'
+7. So 'count' is kept alive (closure!)
+8. Each call to counter() accesses same 'count'
+
+Visual:
+┌──────────────────────────────┐
+│ counter (returned function)  │
+│ [[Scope]]: ──────┐           │
+└──────────────────┼───────────┘
+                   ↓
+         ┌────────────────────┐
+         │ Closure Environment│
+         │ count: 3           │ ← Preserved!
+         └────────────────────┘
+
+Benefits:
+✓ Data privacy
+✓ State preservation
+✓ Factory functions
+✓ Module pattern
+*/
+```
+
+#### **Q5: What is the call stack?**
+
+```javascript
+/*
+ANSWER:
+
+The call stack is a data structure that tracks function calls
+in a program. It operates on Last-In-First-Out (LIFO) principle.
+*/
+
+function first() {
+    console.log('First');
+    second();
+}
+
+function second() {
+    console.log('Second');
+    third();
+}
+
+function third() {
+    console.log('Third');
+}
+
+first();
+
+/*
+Call Stack Timeline:
+
+Step 1: first() called
+┌─────────────┐
+│  first()    │
+├─────────────┤
+│  Global     │
+└─────────────┘
+Output: "First"
+
+Step 2: second() called
+┌─────────────┐
+│  second()   │
+├─────────────┤
+│  first()    │
+├─────────────┤
+│  Global     │
+└─────────────┘
+Output: "Second"
+
+Step 3: third() called
+┌─────────────┐
+│  third()    │
+├─────────────┤
+│  second()   │
+├─────────────┤
+│  first()    │
+├─────────────┤
+│  Global     │
+└─────────────┘
+Output: "Third"
+
+Step 4: third() returns
+┌─────────────┐
+│  second()   │
+├─────────────┤
+│  first()    │
+├─────────────┤
+│  Global     │
+└─────────────┘
+
+Step 5: second() returns
+┌─────────────┐
+│  first()    │
+├─────────────┤
+│  Global     │
+└─────────────┘
+
+Step 6: first() returns
+┌─────────────┐
+│  Global     │
+└─────────────┘
+
+Final Output:
+First
+Second
+Third
+
+Key points:
+- Functions added on call
+- Functions removed on return
+- LIFO order
+- Stack overflow if too deep
+- One stack per thread (JavaScript is single-threaded)
+*/
+```
+
+### **21.2 Intermediate Level**
+
+#### **Q1: Explain how 'this' works in JavaScript**
+
+```javascript
+/*
+ANSWER:
+
+'this' keyword refers to the object that is executing the
+current function. Its value depends on HOW the function is called.
+*/
+
+// Rule 1: Default binding
+function defaultThis() {
+    console.log(this);
+}
+defaultThis();  // Window (non-strict) or undefined (strict)
+
+// Rule 2: Implicit binding (method call)
+const obj = {
+    name: 'Object',
+    showThis: function() {
+        console.log(this.name);
+    }
+};
+obj.showThis();  // "Object" - 'this' is obj
+
+// Rule 3: Explicit binding (call, apply, bind)
+function showName() {
+    console.log(this.name);
+}
+showName.call({ name: 'Called' });  // "Called"
+
+// Rule 4: new binding (constructor)
+function Person(name) {
+    this.name = name;
+}
+const person = new Person('John');
+console.log(person.name);  // "John"
+
+// Rule 5: Arrow functions (lexical this)
+const obj2 = {
+    name: 'Object',
+    regularMethod: function() {
+        const arrowFunc = () => {
+            console.log(this.name);  // Inherits from regularMethod
+        };
+        arrowFunc();
+    }
+};
+obj2.regularMethod();  // "Object"
+
+/*
+Common pitfall: Context loss
+*/
+const person2 = {
+    name: 'Jane',
+    greet: function() {
+        console.log(`Hello, ${this.name}`);
+    }
+};
+
+person2.greet();  // "Hello, Jane" ✓
+
+const greetFunc = person2.greet;
+greetFunc();  // "Hello, undefined" ✗ (lost context)
+
+// Solution: bind
+const boundGreet = person2.greet.bind(person2);
+boundGreet();  // "Hello, Jane" ✓
+```
+
+#### **Q2: What is the event loop?**
+
+```javascript
+/*
+ANSWER:
+
+The event loop coordinates execution of code, events, and messages
+in JavaScript's single-threaded environment.
+
+Components:
+1. Call Stack: Executes synchronous code
+2. Web APIs: Handle async operations
+3. Callback Queue: Holds callbacks (macrotasks)
+4. Microtask Queue: Holds promises (higher priority)
+5. Event Loop: Moves tasks from queues to call stack
+*/
+
+console.log('1');
+
+setTimeout(() => {
+    console.log('2');
+}, 0);
+
+Promise.resolve().then(() => {
+    console.log('3');
+});
+
+console.log('4');
+
+/*
+Output: 1, 4, 3, 2
+
+Execution Flow:
+───────────────
+
+Phase 1: Synchronous
+Call Stack: Execute
+Output: "1"
+setTimeout registered → Macrotask Queue: [cb1]
+Promise registered → Microtask Queue: [cb2]
+Output: "4"
+Call Stack: Empty
+
+Phase 2: Microtasks (higher priority!)
+Process: Promise callback
+Output: "3"
+Microtask Queue: Empty
+
+Phase 3: Macrotasks
+Process: setTimeout callback
+Output: "2"
+
+Rule: After each macrotask, ALL microtasks are processed!
+
+Visual:
+┌─────────────┐
+│ Call Stack  │ → Empty?
+└──────┬──────┘
+       │ Yes
+       ↓
+┌──────────────────┐
+│ Microtask Queue  │ → Process ALL
+└──────┬───────────┘
+       │ Empty
+       ↓
+┌──────────────────┐
+│ Macrotask Queue  │ → Process ONE
+└──────┬───────────┘
+       │
+       ↓ Repeat
+*/
+```
+
+#### **Q3: What is the Temporal Dead Zone (TDZ)?**
+
+```javascript
+/*
+ANSWER:
+
+TDZ is the time between entering a scope and a variable being
+initialized. It applies to let, const, and class declarations.
+*/
+
+function demonstrateTDZ() {
+    // TDZ starts here for 'x'
+    
+    console.log(typeof x);  // ReferenceError!
+    // Still in TDZ
+    
+    let x = 10;  // TDZ ends here
+    
+    console.log(x);  // 10 - Now accessible
+}
+
+demonstrateTDZ();
+
+/*
+Why TDZ exists:
+
+1. Catch errors early
+   - Prevents using variables before initialization
+   - Makes bugs more obvious
+
+2. const semantics
+   - const must be initialized at declaration
+   - TDZ enforces this
+
+3. Consistency
+   - let and const behave similarly
+   - Both in TDZ until initialized
+
+Timeline:
+─────────
+
+Function Entry
+↓
+┌─────────────────────────────┐
+│ TDZ STARTS                  │
+│ (let x declared but not     │
+│  initialized)               │
+│                             │
+│ Any access to x:            │
+│ ReferenceError!             │
+└─────────────────────────────┘
+↓
+let x = 10;
+↓
+┌─────────────────────────────┐
+│ TDZ ENDS                    │
+│ x is now initialized        │
+│ Can access x                │
+└─────────────────────────────┘
+
+Compare with var:
+─────────────────
+
+console.log(varX);  // undefined (no TDZ)
+var varX = 10;
+console.log(varX);  // 10
+
+var is initialized to undefined during hoisting,
+let/const are NOT initialized (TDZ).
+*/
+```
+
+#### **Q4: Explain the difference between microtasks and macrotasks**
+
+```javascript
+/*
+ANSWER:
+
+Microtasks and macrotasks are two types of asynchronous tasks
+with different priorities in the event loop.
+
+MICROTASKS (High Priority):
+- Promise callbacks (.then, .catch, .finally)
+- queueMicrotask()
+- MutationObserver callbacks
+- process.nextTick() (Node.js)
+
+MACROTASKS (Normal Priority):
+- setTimeout
+- setInterval
+- setImmediate (Node.js)
+- I/O operations
+- UI rendering
+
+KEY DIFFERENCE: ALL microtasks are processed before ANY macrotask!
+*/
+
+console.log('Start');
+
+setTimeout(() => {
+    console.log('Macrotask 1');
+}, 0);
+
+Promise.resolve().then(() => {
+    console.log('Microtask 1');
+    Promise.resolve().then(() => {
+        console.log('Microtask 2');
+    });
+});
+
+setTimeout(() => {
+    console.log('Macrotask 2');
+}, 0);
+
+console.log('End');
+
+/*
+Output:
+Start
+End
+Microtask 1
+Microtask 2
+Macrotask 1
+Macrotask 2
+
+Execution Flow:
+───────────────
+
+SYNC PHASE:
+Output: "Start", "End"
+Macrotask Queue: [Macro1, Macro2]
+Microtask Queue: [Micro1]
+
+MICROTASK PHASE:
+Process: Micro1
+Output: "Microtask 1"
+Adds: Micro2 to queue
+Process: Micro2 (NEW microtask processed immediately!)
+Output: "Microtask 2"
+Microtask Queue: Empty
+
+MACROTASK PHASE (Round 1):
+Process: ONE macrotask (Macro1)
+Output: "Macrotask 1"
+Check: Microtasks? None
+Continue
+
+MACROTASK PHASE (Round 2):
+Process: ONE macrotask (Macro2)
+Output: "Macrotask 2"
+
+Pattern:
+Sync → All Micros → One Macro → All Micros → One Macro ...
+*/
+```
+
+#### **Q5: What are closures used for?**
+
+```javascript
+/*
+ANSWER:
+
+Closures are used for:
+1. Data privacy
+2. Function factories
+3. Memoization
+4. Module pattern
+5. Event handlers with state
+*/
+
+// 1. Data Privacy
+function createBankAccount(initialBalance) {
+    let balance = initialBalance;  // Private!
+    
+    return {
+        deposit(amount) {
+            balance += amount;
+            return balance;
+        },
+        getBalance() {
+            return balance;
+        }
+    };
+}
+
+const account = createBankAccount(1000);
+account.deposit(500);
+console.log(account.getBalance());  // 1500
+// Cannot access 'balance' directly ✓
+
+// 2. Function Factories
+function createMultiplier(factor) {
+    return function(number) {
+        return number * factor;
+    };
+}
+
+const double = createMultiplier(2);
+const triple = createMultiplier(3);
+
+console.log(double(5));  // 10
+console.log(triple(5));  // 15
+
+// 3. Memoization
+function memoize(fn) {
+    const cache = new Map();
+    
+    return function(...args) {
+        const key = JSON.stringify(args);
+        
+        if (cache.has(key)) {
+            return cache.get(key);
+        }
+        
+        const result = fn(...args);
+        cache.set(key, result);
+        return result;
+    };
+}
+
+const expensiveCalc = memoize((n) => {
+    console.log('Computing...');
+    return n * n;
+});
+
+expensiveCalc(5);  // "Computing..." → 25
+expensiveCalc(5);  // 25 (cached, no output)
+
+// 4. Module Pattern
+const Module = (function() {
+    let privateVar = 'private';
+    
+    return {
+        getPrivate() {
+            return privateVar;
+        }
+    };
+})();
+
+console.log(Module.getPrivate());  // "private"
+// console.log(privateVar);        // ReferenceError
+
+// 5. Event Handlers with State
+function createButton(label) {
+    let clickCount = 0;
+    
+    return {
+        onClick() {
+            clickCount++;
+            console.log(`${label} clicked ${clickCount} times`);
+        }
+    };
+}
+
+const submitBtn = createButton('Submit');
+submitBtn.onClick();  // "Submit clicked 1 times"
+submitBtn.onClick();  // "Submit clicked 2 times"
+```
+
+### **21.3 Advanced Level**
+
+#### **Q1: Explain async/await execution context**
+
+```javascript
+/*
+ANSWER:
+
+Async functions create special execution contexts that can be
+suspended and resumed. The context is PRESERVED across awaits.
+*/
+
+async function demonstrateContext() {
+    console.log('1. Start');
+    const localVar = 'preserved';
+    let counter = 0;
+    
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Context RESTORED here
+    console.log('2. After await:', localVar);  // Still accessible!
+    counter++;
+    
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Context RESTORED again
+    console.log('3. After second await:', counter);  // Still 1!
+    
+    return 'Done';
+}
+
+demonstrateContext();
+
+/*
+Execution Flow:
+───────────────
+
+T=0ms:
+┌──────────────────────────────┐
+│ demonstrateContext() EC      │
+│ localVar: 'preserved'        │
+│ counter: 0                   │
+└──────────────────────────────┘
+Output: "1. Start"
+
+Hit: await Promise
+Action: SUSPEND context
+       Save: localVar, counter
+       Return: Promise to caller
+       Call Stack: Empty
+
+T=1000ms: Promise resolves
+Action: RESTORE context
+┌──────────────────────────────┐
+│ demonstrateContext() EC      │
+│ localVar: 'preserved' ← Still here!
+│ counter: 0            ← Still here!
+└──────────────────────────────┘
+Output: "2. After await: preserved"
+counter++ → 1
+
+Hit: second await
+Action: SUSPEND again
+       Save: localVar, counter (=1)
+
+T=2000ms: Promise resolves
+Action: RESTORE context
+┌──────────────────────────────┐
+│ demonstrateContext() EC      │
+│ localVar: 'preserved' ← Still here!
+│ counter: 1            ← Updated value!
+└──────────────────────────────┘
+Output: "3. After second await: 1"
+Return: 'Done'
+
+KEY POINTS:
+1. Context suspended (not destroyed)
+2. Variables preserved in memory
+3. Restored exactly as it was
+4. Can suspend multiple times
+5. State maintained across awaits
+6. Single context (multiple pauses)
+
+Compare to callbacks:
+─────────────────────
+
+function callbackVersion() {
+    const localVar = 'preserved';
+    let counter = 0;
+    
+    setTimeout(() => {
+        // NEW execution context
+        // localVar accessible via closure
+        console.log(localVar);
+        counter++;
+        
+        setTimeout(() => {
+            // ANOTHER NEW execution context
+            console.log(counter);
+        }, 1000);
+    }, 1000);
+}
+
+// Different contexts vs suspended context!
+*/
+```
+
+#### **Q2: How do you fix memory leaks with closures?**
+
+```javascript
+/*
+ANSWER:
+
+Common closure memory leaks and their solutions:
+*/
+
+// PROBLEM 1: Detached DOM nodes
+function leakyEventHandler() {
+    const element = document.getElementById('button');
+    const data = new Array(1000000).fill('data');
+    
+    element.addEventListener('click', function() {
+        console.log(data.length);
+    });
+    
+    // Remove element
+    element.remove();
+    
+    // BUG: Handler still references element!
+    // Element cannot be garbage collected
+}
+
+// SOLUTION 1: Remove event listener
+function fixedEventHandler() {
+    const element = document.getElementById('button');
+    const data = new Array(1000000).fill('data');
+    
+    function handleClick() {
+        console.log(data.length);
+    }
+    
+    element.addEventListener('click', handleClick);
+    
+    // Cleanup function
+    return function cleanup() {
+        element.removeEventListener('click', handleClick);
+        element.remove();
+        // Now element can be GC'd
+    };
+}
+
+const cleanup = fixedEventHandler();
+// Later: cleanup();
+
+// PROBLEM 2: Forgotten timers
+function leakyTimer() {
+    const data = new Array(1000000).fill('data');
+    
+    setInterval(function() {
+        console.log(data.length);
+    }, 1000);
+    
+    // BUG: Interval never cleared!
+    // 'data' kept in memory forever
+}
+
+// SOLUTION 2: Clear interval
+function fixedTimer() {
+    const data = new Array(1000000).fill('data');
+    let count = 0;
+    
+    const intervalId = setInterval(function() {
+        console.log(data.length);
+        count++;
+        
+        if (count >= 10) {
+            clearInterval(intervalId);
+            // Now 'data' can be GC'd
+        }
+    }, 1000);
+    
+    return intervalId;
+}
+
+// PROBLEM 3: Unnecessary closure over large data
+function leakyFactory() {
+    const hugeArray = new Array(1000000).fill('data');
+    
+    return function() {
+        // Doesn't use hugeArray
+        console.log('Hello');
+    };
+    // But hugeArray is kept in memory!
+}
+
+// SOLUTION 3: Only close over what you need
+function fixedFactory() {
+    const hugeArray = new Array(1000000).fill('data');
+    const smallValue = hugeArray.length;
+    // hugeArray can be GC'd after this line
+    
+    return function() {
+        console.log(smallValue);
+    };
+}
+
+// Or use IIFE:
+function fixedFactoryAlt() {
+    const smallValue = (function() {
+        const hugeArray = new Array(1000000).fill('data');
+        return hugeArray.length;
+    })();  // hugeArray GC'd immediately
+    
+    return function() {
+        console.log(smallValue);
+    };
+}
+
+// PROBLEM 4: Accumulating closures
+const cache = [];
+
+function leakyCache() {
+    for (let i = 0; i < 1000; i++) {
+        const data = new Array(1000).fill(`item-${i}`);
+        
+        cache.push(function() {
+            return data;
+        });
+    }
+    // 1000 * 1000 = 1,000,000 items in memory!
+}
+
+// SOLUTION 4: Limit cache size
+const fixedCache = [];
+const MAX_CACHE_SIZE = 100;
+
+function fixedCacheImpl() {
+    for (let i = 0; i < 1000; i++) {
+        const data = new Array(1000).fill(`item-${i}`);
+        
+        if (fixedCache.length >= MAX_CACHE_SIZE) {
+            fixedCache.shift();  // Remove oldest
+        }
+        
+        fixedCache.push(function() {
+            return data;
+        });
+    }
+    // Only last 100 items kept
+}
+
+// SOLUTION 5: Use WeakMap
+const weakCache = new WeakMap();
+
+function useWeakMap() {
+    const obj = {};
+    const data = new Array(1000000).fill('data');
+    
+    weakCache.set(obj, data);
+    
+    // When obj is no longer referenced:
+    // obj = null;
+    // WeakMap entry automatically removed!
+}
+
+/*
+Best Practices:
+✓ Clear timers and intervals
+✓ Remove event listeners
+✓ Nullify references when done
+✓ Use WeakMap for caches
+✓ Only close over necessary variables
+✓ Monitor memory usage (DevTools)
+✓ Profile regularly
+*/
+```
+
+#### **Q3: Implement curry function that works with multiple arguments**
+
+```javascript
+/*
+ANSWER:
+
+A curry function transforms f(a, b, c) into f(a)(b)(c)
+*/
+
+function curry(fn) {
+    return function curried(...args) {
+        // If all arguments provided, call function
+        if (args.length >= fn.length) {
+            return fn.apply(this, args);
+        }
+        
+        // Otherwise, return function waiting for more args
+        return function(...moreArgs) {
+            return curried.apply(this, args.concat(moreArgs));
+        };
+    };
+}
+
+// Test
+function sum(a, b, c) {
+    return a + b + c;
+}
+
+const curriedSum = curry(sum);
+
+// All at once
+console.log(curriedSum(1, 2, 3));  // 6
+
+// One at a time
+console.log(curriedSum(1)(2)(3));  // 6
+
+// Partially
+console.log(curriedSum(1, 2)(3));  // 6
+console.log(curriedSum(1)(2, 3));  // 6
+
+// Reusable partial applications
+const add5 = curriedSum(5);
+console.log(add5(3, 2));  // 10
+console.log(add5(1, 4));  // 10
+
+/*
+How it works:
+─────────────
+
+curriedSum(1)(2)(3)
+
+Step 1: curriedSum(1)
+args: [1]
+fn.length: 3
+args.length < fn.length → Return function
+Closure: args = [1]
+
+Step 2: returned function(2)
+args: [1] (from closure)
+moreArgs: [2]
+Combined: [1, 2]
+Still < 3 → Return function
+Closure: args = [1, 2]
+
+Step 3: returned function(3)
+args: [1, 2] (from closure)
+moreArgs: [3]
+Combined: [1, 2, 3]
+args.length === fn.length → Call fn!
+Result: sum(1, 2, 3) = 6
+
+Execution Context Chain:
+┌────────────────────────────┐
+│ Final call                 │
+│ [[Scope]]: ──────┐         │
+└──────────────────┼─────────┘
+                   ↓
+         ┌────────────────┐
+         │ args: [1, 2]   │
+         │ outer: ──────┐ │
+         └──────────────┼─┘
+                        ↓
+                ┌──────────────┐
+                │ args: [1]    │
+                │ outer: ────┐ │
+                └────────────┼─┘
+                             ↓
+                       ┌──────────┐
+                       │ fn: sum  │
+                       └──────────┘
+
+Each level closes over accumulated args!
+*/
+```
+
+#### **Q4: Explain generator execution context**
+
+```javascript
+/*
+ANSWER:
+
+Generators are functions that can pause and resume execution.
+They maintain their execution context across pauses.
+*/
+
+function* generatorExample() {
+    console.log('Start');
+    const a = 1;
+    
+    yield a;
+    console.log('After first yield');
+    const b = 2;
+    
+    yield a + b;
+    console.log('After second yield');
+    
+    return a + b + 3;
+}
+
+const gen = generatorExample();
+
+console.log('Created generator');
+console.log(gen.next());  // { value: 1, done: false }
+console.log('Between yields');
+console.log(gen.next());  // { value: 3, done: false }
+console.log('Before final');
+console.log(gen.next());  // { value: 6, done: true }
+
+/*
+Execution Flow:
+───────────────
+
+Creating generator:
+const gen = generatorExample();
+→ Does NOT execute function body yet!
+→ Returns generator object
+→ No execution context created yet
+
+First next():
+gen.next()
+
+┌──────────────────────────────┐
+│ Generator EC (Created)       │
+│ a: undefined                 │
+└──────────────────────────────┘
+
+Execute: console.log('Start')
+Output: "Start"
+
+Execute: const a = 1
+┌──────────────────────────────┐
+│ Generator EC                 │
+│ a: 1                         │
+└──────────────────────────────┘
+
+Hit: yield a
+→ PAUSE execution
+→ SAVE context { a: 1 }
+→ Return { value: 1, done: false }
+→ Generator EC suspended
+
+Second next():
+gen.next()
+
+┌──────────────────────────────┐
+│ Generator EC (RESTORED)      │
+│ a: 1  ← Preserved!           │
+│ b: undefined                 │
+└──────────────────────────────┘
+
+Execute: console.log('After first yield')
+Output: "After first yield"
+
+Execute: const b = 2
+┌──────────────────────────────┐
+│ Generator EC                 │
+│ a: 1                         │
+│ b: 2                         │
+└──────────────────────────────┘
+
+Hit: yield a + b
+→ PAUSE again
+→ SAVE context { a: 1, b: 2 }
+→ Return { value: 3, done: false }
+
+Third next():
+gen.next()
+
+┌──────────────────────────────┐
+│ Generator EC (RESTORED)      │
+│ a: 1  ← Still here!          │
+│ b: 2  ← Still here!          │
+└──────────────────────────────┘
+
+Execute: console.log('After second yield')
+Output: "After second yield"
+
+Execute: return a + b + 3
+Result: 6
+Return: { value: 6, done: true }
+Generator EC destroyed
+
+Key Points:
+1. Generator EC created on first next()
+2. Context SUSPENDED at yield
+3. Variables PRESERVED
+4. Context RESTORED on next()
+5. Can pause multiple times
+6. State maintained across pauses
+7. Similar to async/await but synchronous
+
+Difference from async/await:
+────────────────────────────
+- Generator: Synchronous pausing
+- Async/await: Asynchronous pausing (awaits Promises)
+- Generator: Manual control (next())
+- Async/await: Automatic (await)
+*/
+```
+
+#### **Q5: Implement a function that limits concurrent async operations**
+
+```javascript
+/*
+ANSWER:
+
+Create a function that limits how many async operations
+run concurrently.
+*/
+
+function limitConcurrency(asyncFunctions, limit) {
+    return new Promise((resolve, reject) => {
+        const results = [];
+        let currentIndex = 0;
+        let runningCount = 0;
+        let completedCount = 0;
+        
+        function runNext() {
+            // All started and completed
+            if (completedCount === asyncFunctions.length) {
+                resolve(results);
+                return;
+            }
+            
+            // Start new tasks up to limit
+            while (runningCount < limit && currentIndex < asyncFunctions.length) {
+                const index = currentIndex;
+                currentIndex++;
+                runningCount++;
+                
+                asyncFunctions[index]()
+                    .then(result => {
+                        results[index] = result;
+                        completedCount++;
+                        runningCount--;
+                        runNext();
+                    })
+                    .catch(error => {
+                        reject(error);
+                    });
+            }
+        }
+        
+        runNext();
+    });
+}
+
+// Test
+const tasks = [
+    () => new Promise(resolve => setTimeout(() => resolve(1), 1000)),
+    () => new Promise(resolve => setTimeout(() => resolve(2), 500)),
+    () => new Promise(resolve => setTimeout(() => resolve(3), 750)),
+    () => new Promise(resolve => setTimeout(() => resolve(4), 250)),
+    () => new Promise(resolve => setTimeout(() => resolve(5), 1500))
+];
+
+limitConcurrency(tasks, 2).then(results => {
+    console.log('Results:', results);  // [1, 2, 3, 4, 5]
+});
+
+/*
+Execution Timeline (limit=2):
+──────────────────────────────
+
+T=0ms:
+Running: [task1, task2]
+Waiting: [task3, task4, task5]
+runningCount: 2
+
+T=250ms:
+task4 completes
+Running: [task1, task2, task3]
+runningCount: 2
+
+T=500ms:
+task2 completes
+Running: [task1, task3, task5]
+runningCount: 2
+
+T=750ms:
+task3 completes
+Running: [task1, task5]
+runningCount: 2 (no more tasks to start)
+
+T=1000ms:
+task1 completes
+Running: [task5]
+runningCount: 1
+
+T=1500ms:
+task5 completes
+Running: []
+runningCount: 0
+completedCount: 5
+→ Resolve with results
+
+Closures Used:
+──────────────
+1. runNext() closes over:
+   - results
+   - currentIndex
+   - runningCount
+   - completedCount
+   
+2. Each .then() callback closes over:
+   - index (specific task index)
+   - Shared counters
+
+This maintains state across async operations!
+
+Alternative Implementation (Simpler):
+─────────────────────────────────────
+*/
+
+async function limitConcurrencyAlt(asyncFunctions, limit) {
+    const results = [];
+    const executing = [];
+    
+    for (const [index, fn] of asyncFunctions.entries()) {
+        const promise = Promise.resolve().then(() => fn()).then(result => {
+            results[index] = result;
+        });
+        
+        executing.push(promise);
+        
+        if (executing.length >= limit) {
+            await Promise.race(executing);
+            executing.splice(executing.findIndex(p => {
+                return p === promise;
+            }), 1);
+        }
+    }
+    
+    await Promise.all(executing);
+    return results;
+}
+
+/*
+Benefits:
+✓ Limits concurrent operations
+✓ Maintains order
+✓ Efficient resource usage
+✓ Good for API rate limiting
+✓ Prevents overwhelming server
+
+Use cases:
+- Bulk API calls
+- File uploads
+- Image processing
+- Database queries
+- Web scraping
+*/
+```
+
+---
+
+
+
