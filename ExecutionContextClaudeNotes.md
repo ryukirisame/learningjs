@@ -10053,6 +10053,2477 @@ class DataProcessor {
 }
 ```
 
+# **PART 5: THE 'THIS' KEYWORD**
+
+## **11. UNDERSTANDING 'THIS'**
+
+### **11.1 What is 'this'?**
+
+**`this`** is a special keyword that refers to the context object in which the current code is executing. Unlike variables that are resolved through the scope chain, `this` is determined by **how a function is called**.
+
+#### **Fundamental 'this' Concept:**
+
+```javascript
+/*
+═══════════════════════════════════════════════════════════
+KEY PRINCIPLE: 'this' is determined by the CALL SITE
+═══════════════════════════════════════════════════════════
+
+'this' is NOT:
+✗ Where the function is defined (that's scope)
+✗ Where the function is declared
+✗ A property of the function
+
+'this' IS:
+✓ Determined at runtime
+✓ Based on how function is called
+✓ The context object for the function call
+✓ Can change with each function call
+*/
+
+const obj = {
+    name: "Object",
+    showThis: function() {
+        console.log(this);
+        console.log(this.name);
+    }
+};
+
+// Same function, different 'this' values:
+obj.showThis();              // this = obj, prints "Object"
+
+const detached = obj.showThis;
+detached();                  // this = global/undefined
+
+obj.showThis.call({name: "X"});  // this = {name: "X"}
+
+/*
+═══════════════════════════════════════════════════════════
+'THIS' VS SCOPE VARIABLES
+═══════════════════════════════════════════════════════════
+
+const outer = {
+    outerName: "Outer",
+    method: function() {
+        const innerName = "Inner";
+        
+        function inner() {
+            console.log(innerName);    // ✓ Scope chain
+            console.log(this.outerName); // ✗ 'this' is not 'outer'!
+        }
+        
+        inner();
+    }
+};
+
+outer.method();
+
+Output:
+"Inner"      ← Found via scope chain
+undefined    ← 'this' is global, not outer
+
+Explanation:
+- innerName: Resolved through scope chain (lexical)
+- this: Determined by how inner() is called (dynamic)
+- inner() called as regular function → this = global
+- NOT called as method → this ≠ outer
+*/
+```
+
+#### **The Five Rules of 'this':**
+
+```javascript
+/*
+═══════════════════════════════════════════════════════════
+RULE 1: DEFAULT BINDING (Global Context)
+═══════════════════════════════════════════════════════════
+*/
+
+function defaultBinding() {
+    console.log(this);
+}
+
+defaultBinding();  // Window (non-strict) or undefined (strict)
+
+/*
+When function is called without any context:
+- Non-strict mode: this = global object
+- Strict mode: this = undefined
+
+Call Site: defaultBinding()
+           ↑ No context
+
+Execution Context:
+{
+    ThisBinding: <global object> or undefined
+}
+*/
+
+/*
+═══════════════════════════════════════════════════════════
+RULE 2: IMPLICIT BINDING (Method Call)
+═══════════════════════════════════════════════════════════
+*/
+
+const person = {
+    name: "John",
+    greet: function() {
+        console.log(this.name);
+    }
+};
+
+person.greet();  // "John"
+
+/*
+When function is called as object method:
+- this = the object
+
+Call Site: person.greet()
+           ↑      ↑
+         context  method
+
+The object to the left of the dot becomes 'this'
+
+Execution Context:
+{
+    ThisBinding: person
+}
+*/
+
+/*
+═══════════════════════════════════════════════════════════
+RULE 3: EXPLICIT BINDING (call, apply, bind)
+═══════════════════════════════════════════════════════════
+*/
+
+function explicitBinding() {
+    console.log(this.name);
+}
+
+const context = { name: "Context" };
+
+explicitBinding.call(context);   // "Context"
+explicitBinding.apply(context);  // "Context"
+
+const bound = explicitBinding.bind(context);
+bound();  // "Context"
+
+/*
+When function is called with call/apply/bind:
+- this = the provided object
+
+Execution Context:
+{
+    ThisBinding: context  // Explicitly set
+}
+*/
+
+/*
+═══════════════════════════════════════════════════════════
+RULE 4: NEW BINDING (Constructor)
+═══════════════════════════════════════════════════════════
+*/
+
+function Person(name) {
+    this.name = name;
+    console.log(this);
+}
+
+const john = new Person("John");
+
+/*
+When function is called with 'new':
+- Creates new empty object
+- this = new object
+- Sets prototype
+- Returns the object
+
+Process:
+1. {} created
+2. this = {}
+3. {}.[[Prototype]] = Person.prototype
+4. Person executes with this = {}
+5. Return {} (implicit)
+
+Execution Context:
+{
+    ThisBinding: <newly created object>
+}
+*/
+
+/*
+═══════════════════════════════════════════════════════════
+RULE 5: ARROW FUNCTIONS (Lexical 'this')
+═══════════════════════════════════════════════════════════
+*/
+
+const obj = {
+    name: "Object",
+    regular: function() {
+        console.log("Regular:", this.name);
+        
+        const arrow = () => {
+            console.log("Arrow:", this.name);
+        };
+        
+        arrow();
+    }
+};
+
+obj.regular();
+// Regular: Object
+// Arrow: Object
+
+/*
+Arrow functions DON'T have their own 'this':
+- Inherit 'this' from enclosing scope (lexically)
+- 'this' cannot be changed
+
+The arrow function's 'this' is determined at DEFINITION time,
+not CALL time.
+
+Execution Context for arrow:
+{
+    ThisBinding: <inherited from regular()>
+}
+*/
+```
+
+### **11.2 This in Global Context**
+
+#### **Browser Environment:**
+
+```javascript
+console.log(this);  // Window object
+
+var globalVar = "global";
+this.anotherVar = "another";
+
+console.log(window.globalVar);   // "global"
+console.log(window.anotherVar);  // "another"
+console.log(this.globalVar);     // "global"
+console.log(this.anotherVar);    // "another"
+
+/*
+═══════════════════════════════════════════════════════════
+BROWSER GLOBAL CONTEXT
+═══════════════════════════════════════════════════════════
+
+In browser:
+- Global context: this = window
+- var creates properties on window
+- let/const do NOT create properties on window
+
+┌─────────────────────────────────┐
+│ Global Execution Context        │
+│ ThisBinding: window             │
+│                                 │
+│ VariableEnvironment:            │
+│   globalVar: "global"           │
+│                                 │
+│ window object:                  │
+│   globalVar: "global"  ← var    │
+│   anotherVar: "another" ← this  │
+└─────────────────────────────────┘
+
+let globalLet = "let";
+console.log(window.globalLet);  // undefined
+console.log(this.globalLet);    // undefined
+*/
+
+// Strict mode in global context
+'use strict';
+console.log(this);  // Still Window in global context
+
+function strictFunction() {
+    'use strict';
+    console.log(this);  // undefined
+}
+
+strictFunction();
+
+/*
+Strict mode changes:
+- Global context: this = window (unchanged)
+- Function context: this = undefined (changed!)
+*/
+```
+
+#### **Node.js Environment:**
+
+```javascript
+// In Node.js module:
+console.log(this);  // {} (empty object, module.exports)
+console.log(this === module.exports);  // true
+
+var globalVar = "global";
+console.log(global.globalVar);  // undefined (not on global!)
+
+// To make truly global:
+global.myGlobal = "truly global";
+
+function checkThis() {
+    console.log(this);  // undefined (in strict mode by default)
+}
+
+checkThis();
+
+/*
+═══════════════════════════════════════════════════════════
+NODE.JS GLOBAL CONTEXT
+═══════════════════════════════════════════════════════════
+
+Node.js differences:
+1. Top-level code runs in MODULE scope (not global)
+2. 'this' at top level = module.exports
+3. 'global' is the global object (like window)
+4. var doesn't create global properties
+
+┌─────────────────────────────────┐
+│ Module Scope                    │
+│ ThisBinding: module.exports     │
+│                                 │
+│ Variables are module-scoped:    │
+│   globalVar: "global"           │
+│                                 │
+│ global object:                  │
+│   (doesn't have globalVar)      │
+└─────────────────────────────────┘
+*/
+```
+
+#### **Universal Access (globalThis):**
+
+```javascript
+// ES2020: globalThis works everywhere
+console.log(globalThis);
+
+// Browser: globalThis === window
+// Node.js: globalThis === global
+// Web Worker: globalThis === self
+
+function universal() {
+    console.log(globalThis);  // Always the global object
+}
+
+/*
+═══════════════════════════════════════════════════════════
+GLOBALHIS (ES2020)
+═══════════════════════════════════════════════════════════
+
+Before globalThis:
+const global = typeof window !== 'undefined' ? window :
+               typeof global !== 'undefined' ? global :
+               typeof self !== 'undefined' ? self : {};
+
+After globalThis:
+const global = globalThis;  // Always works!
+
+Benefits:
+✓ Universal across all environments
+✓ No environment detection needed
+✓ More maintainable code
+✓ Future-proof
+*/
+```
+
+### **11.3 This in Function Context**
+
+#### **Regular Function Calls:**
+
+```javascript
+function regularFunction() {
+    console.log("Non-strict:", this);
+}
+
+regularFunction();  // Window (non-strict)
+
+function strictFunction() {
+    'use strict';
+    console.log("Strict:", this);
+}
+
+strictFunction();  // undefined (strict)
+
+/*
+═══════════════════════════════════════════════════════════
+FUNCTION CALL 'THIS' DETERMINATION
+═══════════════════════════════════════════════════════════
+
+Call Site Analysis:
+regularFunction()
+↑ No context object
+
+Resolution:
+1. Is it strict mode? No
+2. Is there a context object? No
+3. Default binding: this = global object
+
+┌─────────────────────────────────┐
+│ regularFunction EC              │
+│ ThisBinding: window             │
+└─────────────────────────────────┘
+
+Call Site Analysis:
+strictFunction()
+↑ No context object
+
+Resolution:
+1. Is it strict mode? Yes
+2. Is there a context object? No
+3. Default binding (strict): this = undefined
+
+┌─────────────────────────────────┐
+│ strictFunction EC               │
+│ ThisBinding: undefined          │
+└─────────────────────────────────┘
+*/
+```
+
+#### **Nested Function 'this':**
+
+```javascript
+const obj = {
+    name: "Object",
+    method: function() {
+        console.log("Method this:", this.name);  // "Object"
+        
+        function nestedFunction() {
+            console.log("Nested this:", this.name);  // undefined
+        }
+        
+        nestedFunction();  // Regular function call!
+    }
+};
+
+obj.method();
+
+/*
+═══════════════════════════════════════════════════════════
+COMMON MISTAKE: LOST 'THIS' IN NESTED FUNCTIONS
+═══════════════════════════════════════════════════════════
+
+Call Site Analysis:
+
+1. obj.method()
+   ↑   ↑ Method call
+   context
+
+   method's this = obj ✓
+
+2. nestedFunction()
+   ↑ Regular function call, no context
+
+   nestedFunction's this = global/undefined ✗
+
+Visual:
+┌─────────────────────────────────┐
+│ method() EC                     │
+│ ThisBinding: obj                │
+│                                 │
+│ ┌─────────────────────────────┐ │
+│ │ nestedFunction() EC         │ │
+│ │ ThisBinding: global/undef   │ │
+│ │ (NOT inherited from method!)│ │
+│ └─────────────────────────────┘ │
+└─────────────────────────────────┘
+
+Each function has its own 'this'!
+
+═══════════════════════════════════════════════════════════
+SOLUTIONS
+═══════════════════════════════════════════════════════════
+*/
+
+// Solution 1: Save 'this' reference
+const obj1 = {
+    name: "Object",
+    method: function() {
+        const self = this;  // Save reference
+        
+        function nestedFunction() {
+            console.log("Nested this:", self.name);  // "Object" ✓
+        }
+        
+        nestedFunction();
+    }
+};
+
+// Solution 2: Arrow function
+const obj2 = {
+    name: "Object",
+    method: function() {
+        const nestedFunction = () => {
+            console.log("Nested this:", this.name);  // "Object" ✓
+        };
+        
+        nestedFunction();
+    }
+};
+
+// Solution 3: bind
+const obj3 = {
+    name: "Object",
+    method: function() {
+        function nestedFunction() {
+            console.log("Nested this:", this.name);
+        }
+        
+        nestedFunction.call(this);  // or .bind(this)()
+    }
+};
+```
+
+### **11.4 This in Method Context**
+
+#### **Object Method Calls:**
+
+```javascript
+const person = {
+    firstName: "John",
+    lastName: "Doe",
+    fullName: function() {
+        return this.firstName + " " + this.lastName;
+    },
+    greet: function() {
+        console.log("Hello, " + this.fullName());
+    }
+};
+
+person.greet();  // "Hello, John Doe"
+
+/*
+═══════════════════════════════════════════════════════════
+METHOD CALL 'THIS'
+═══════════════════════════════════════════════════════════
+
+Call Site: person.greet()
+           ↑      ↑
+         object  method
+
+Rule: Object to the left of the dot becomes 'this'
+
+greet() Execution Context:
+{
+    ThisBinding: person
+}
+
+Inside greet:
+- this = person
+- this.fullName() = person.fullName()
+- Inside fullName(), this is also person
+*/
+```
+
+#### **Implicit Binding Loss:**
+
+```javascript
+const person = {
+    name: "John",
+    greet: function() {
+        console.log("Hello, " + this.name);
+    }
+};
+
+// Works fine
+person.greet();  // "Hello, John"
+
+// Context loss!
+const greetFunction = person.greet;
+greetFunction();  // "Hello, undefined"
+
+// Also context loss in callbacks
+setTimeout(person.greet, 1000);  // "Hello, undefined"
+
+/*
+═══════════════════════════════════════════════════════════
+WHY CONTEXT LOSS?
+═══════════════════════════════════════════════════════════
+
+person.greet()
+↑      ↑
+object method → this = person ✓
+
+greetFunction()
+↑ No object context → this = global/undefined ✗
+
+Visual:
+┌──────────────────────────────────────┐
+│ greetFunction = person.greet         │
+│ ↑ Reference to function, NOT method  │
+│                                      │
+│ When called: greetFunction()         │
+│ No object context!                   │
+│ this = global/undefined              │
+└──────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════
+FIXES
+═══════════════════════════════════════════════════════════
+*/
+
+// Fix 1: Wrapper function
+setTimeout(function() {
+    person.greet();  // Called as method ✓
+}, 1000);
+
+// Fix 2: Arrow function
+setTimeout(() => person.greet(), 1000);
+
+// Fix 3: bind
+const boundGreet = person.greet.bind(person);
+setTimeout(boundGreet, 1000);  // "Hello, John" ✓
+
+// Fix 4: Class with arrow function property
+class Person {
+    constructor(name) {
+        this.name = name;
+        // Arrow function as property
+        this.greet = () => {
+            console.log("Hello, " + this.name);
+        };
+    }
+}
+
+const john = new Person("John");
+setTimeout(john.greet, 1000);  // "Hello, John" ✓
+// Arrow function 'this' is bound at creation
+```
+
+#### **Chained Method Calls:**
+
+```javascript
+const calculator = {
+    value: 0,
+    add: function(num) {
+        this.value += num;
+        return this;  // Return this for chaining
+    },
+    subtract: function(num) {
+        this.value -= num;
+        return this;
+    },
+    multiply: function(num) {
+        this.value *= num;
+        return this;
+    },
+    getValue: function() {
+        return this.value;
+    }
+};
+
+const result = calculator
+    .add(10)
+    .subtract(5)
+    .multiply(2)
+    .getValue();
+
+console.log(result);  // 10
+
+/*
+═══════════════════════════════════════════════════════════
+METHOD CHAINING AND 'THIS'
+═══════════════════════════════════════════════════════════
+
+Step-by-step execution:
+
+1. calculator.add(10)
+   - this = calculator
+   - this.value = 0 + 10 = 10
+   - return this (calculator)
+
+2. (return value).subtract(5)
+   - calculator.subtract(5)
+   - this = calculator
+   - this.value = 10 - 5 = 5
+   - return this (calculator)
+
+3. (return value).multiply(2)
+   - calculator.multiply(2)
+   - this = calculator
+   - this.value = 5 * 2 = 10
+   - return this (calculator)
+
+4. (return value).getValue()
+   - calculator.getValue()
+   - return this.value (10)
+
+Each method call maintains 'this' = calculator
+*/
+```
+
+### **11.5 This in Constructor Functions**
+
+#### **Constructor Function 'this':**
+
+```javascript
+function Person(firstName, lastName) {
+    // 'new' creates empty object and sets 'this' to it
+    this.firstName = firstName;
+    this.lastName = lastName;
+    
+    this.fullName = function() {
+        return this.firstName + " " + this.lastName;
+    };
+    
+    // Implicit: return this;
+}
+
+const john = new Person("John", "Doe");
+console.log(john.fullName());  // "John Doe"
+
+/*
+═══════════════════════════════════════════════════════════
+WHAT HAPPENS WITH 'NEW'
+═══════════════════════════════════════════════════════════
+
+new Person("John", "Doe")
+
+Step 1: Create empty object
+  {} created
+
+Step 2: Set prototype
+  {}.__proto__ = Person.prototype
+
+Step 3: Bind 'this'
+  this = {}
+
+Step 4: Execute constructor
+  this.firstName = "John"
+  this.lastName = "Doe"
+  this.fullName = function() { ... }
+  
+  Object now: {
+    firstName: "John",
+    lastName: "Doe",
+    fullName: [Function]
+  }
+
+Step 5: Return
+  return this (implicit)
+  
+Result: john = {
+  firstName: "John",
+  lastName: "Doe",
+  fullName: [Function]
+}
+
+═══════════════════════════════════════════════════════════
+CONSTRUCTOR WITHOUT 'NEW' (MISTAKE)
+═══════════════════════════════════════════════════════════
+*/
+
+function PersonNoNew(firstName, lastName) {
+    this.firstName = firstName;
+    this.lastName = lastName;
+}
+
+// Forgot 'new'!
+const mistake = PersonNoNew("John", "Doe");
+
+console.log(mistake);  // undefined
+console.log(window.firstName);  // "John" (Oops! Global!)
+console.log(window.lastName);   // "Doe" (Oops! Global!)
+
+/*
+Without 'new':
+- No object created
+- this = global/undefined
+- Properties set on global object!
+- Function returns undefined
+
+═══════════════════════════════════════════════════════════
+PROTECTION AGAINST MISSING 'NEW'
+═══════════════════════════════════════════════════════════
+*/
+
+function SafePerson(firstName, lastName) {
+    // Check if called with 'new'
+    if (!(this instanceof SafePerson)) {
+        return new SafePerson(firstName, lastName);
+    }
+    
+    this.firstName = firstName;
+    this.lastName = lastName;
+}
+
+const safe1 = new SafePerson("John", "Doe");  // Works
+const safe2 = SafePerson("Jane", "Doe");      // Also works!
+
+// Or use ES6 new.target
+function ModernPerson(firstName, lastName) {
+    if (!new.target) {
+        throw new Error("Must be called with new");
+    }
+    
+    this.firstName = firstName;
+    this.lastName = lastName;
+}
+```
+
+#### **Constructor with Explicit Return:**
+
+```javascript
+function PersonWithReturn(name) {
+    this.name = name;
+    
+    // Return object: overrides 'this'
+    return {
+        name: "Overridden",
+        type: "custom"
+    };
+}
+
+const p1 = new PersonWithReturn("John");
+console.log(p1.name);  // "Overridden"
+console.log(p1.type);  // "custom"
+
+function PersonWithPrimitiveReturn(name) {
+    this.name = name;
+    
+    // Return primitive: ignored, returns 'this'
+    return "ignored";
+}
+
+const p2 = new PersonWithPrimitiveReturn("John");
+console.log(p2.name);  // "John"
+console.log(p2);       // PersonWithPrimitiveReturn { name: "John" }
+
+/*
+═══════════════════════════════════════════════════════════
+RETURN RULES WITH 'NEW'
+═══════════════════════════════════════════════════════════
+
+If constructor explicitly returns:
+1. Object → returned object used (this ignored)
+2. Primitive → return ignored, this used
+3. Nothing → this returned (normal case)
+
+Examples:
+
+return { x: 1 };        // Object → returns { x: 1 }
+return [1, 2, 3];       // Object → returns [1, 2, 3]
+return function() {};   // Object → returns function
+
+return "string";        // Primitive → returns this
+return 123;             // Primitive → returns this
+return true;            // Primitive → returns this
+return null;            // Special: returns this
+return undefined;       // Returns this
+
+// (nothing)            // Returns this
+*/
+```
+
+### **11.6 This in Arrow Functions**
+
+#### **Arrow Function Lexical 'this':**
+
+```javascript
+const obj = {
+    name: "Object",
+    
+    regularMethod: function() {
+        console.log("Regular:", this.name);  // "Object"
+        
+        // Arrow function inherits 'this'
+        const arrow = () => {
+            console.log("Arrow:", this.name);  // "Object"
+        };
+        
+        arrow();
+        
+        // Even if we try to change 'this'
+        arrow.call({ name: "Other" });  // Still "Object"
+    },
+    
+    arrowMethod: () => {
+        console.log("Arrow method:", this.name);  // undefined
+    }
+};
+
+obj.regularMethod();
+obj.arrowMethod();
+
+/*
+═══════════════════════════════════════════════════════════
+ARROW FUNCTION 'THIS' RULES
+═══════════════════════════════════════════════════════════
+
+1. Arrow functions DON'T have their own 'this'
+2. They inherit 'this' from enclosing lexical scope
+3. 'this' is determined at DEFINITION time, not CALL time
+4. Cannot be changed with call/apply/bind
+5. Cannot be used as constructors
+
+Visual:
+
+┌─────────────────────────────────┐
+│ obj.regularMethod() EC          │
+│ ThisBinding: obj                │
+│                                 │
+│ ┌─────────────────────────────┐ │
+│ │ arrow() EC                  │ │
+│ │ ThisBinding: INHERITED      │ │
+│ │ (from regularMethod)        │ │
+│ │ = obj                       │ │
+│ └─────────────────────────────┘ │
+└─────────────────────────────────┘
+
+Arrow function defined in regularMethod:
+- Captures 'this' from regularMethod
+- this = obj (from regularMethod's context)
+- Immutable (cannot be changed)
+
+Arrow function as object method:
+- Defined at object literal level
+- Enclosing scope is global/module
+- this = global/undefined
+- NOT what you usually want!
+*/
+```
+
+#### **Arrow Functions in Different Contexts:**
+
+```javascript
+// Context 1: Global arrow function
+const globalArrow = () => {
+    console.log(this);
+};
+
+globalArrow();  // Window (browser) or {} (Node.js module)
+
+/*
+Enclosing scope: Global
+'this' inherited from: Global context
+*/
+
+// Context 2: Arrow in regular function
+function regularFunction() {
+    const arrow = () => {
+        console.log(this);
+    };
+    
+    arrow();
+}
+
+regularFunction();  // Global/undefined
+
+/*
+Enclosing scope: regularFunction
+'this' inherited from: regularFunction's this
+regularFunction called as regular function → this = global/undefined
+*/
+
+// Context 3: Arrow in method
+const obj = {
+    method: function() {
+        const arrow = () => {
+            console.log(this);
+        };
+        
+        arrow();
+    }
+};
+
+obj.method();  // obj
+
+/*
+Enclosing scope: method function
+'this' inherited from: method's this
+method called as obj.method() → this = obj
+*/
+
+// Context 4: Arrow in constructor
+function Constructor() {
+    this.value = 42;
+    
+    this.arrow = () => {
+        console.log(this.value);
+    };
+}
+
+const instance = new Constructor();
+instance.arrow();  // 42
+
+const detached = instance.arrow;
+detached();  // Still 42! (this permanently bound)
+
+/*
+Enclosing scope: Constructor function
+'this' inherited from: Constructor's this
+Constructor called with new → this = new instance
+Arrow function bound to that instance forever!
+*/
+
+/*
+═══════════════════════════════════════════════════════════
+ARROW FUNCTION BENEFITS
+═══════════════════════════════════════════════════════════
+*/
+
+// Benefit 1: Callbacks retain context
+class Timer {
+    constructor() {
+        this.seconds = 0;
+    }
+    
+    start() {
+        // Arrow function in callback
+        setInterval(() => {
+            this.seconds++;
+            console.log(this.seconds);
+        }, 1000);
+    }
+}
+
+const timer = new Timer();
+timer.start();  // 1, 2, 3, ... (works!)
+
+// Benefit 2: Event handlers
+class Button {
+    constructor(label) {
+        this.label = label;
+        this.clicks = 0;
+    }
+    
+    handleClick = () => {
+        this.clicks++;
+        console.log(`${this.label}: ${this.clicks}`);
+    }
+}
+
+const btn = new Button("Submit");
+document.querySelector('button').onclick = btn.handleClick;
+// Click works! 'this' is always btn instance
+
+// Benefit 3: Array methods
+const numbers = [1, 2, 3, 4, 5];
+
+const multiplier = {
+    factor: 2,
+    
+    multiply: function() {
+        return numbers.map(n => n * this.factor);
+    }
+};
+
+console.log(multiplier.multiply());  // [2, 4, 6, 8, 10]
+// Arrow function: 'this' = multiplier ✓
+
+/*
+═══════════════════════════════════════════════════════════
+ARROW FUNCTION LIMITATIONS
+═══════════════════════════════════════════════════════════
+*/
+
+// Limitation 1: Cannot be constructor
+const ArrowConstructor = (name) => {
+    this.name = name;
+};
+
+// new ArrowConstructor("John");  // TypeError
+
+// Limitation 2: No 'arguments' object
+const arrowArgs = () => {
+    console.log(arguments);  // ReferenceError
+};
+
+// Use rest parameters instead:
+const arrowRest = (...args) => {
+    console.log(args);  // Works!
+};
+
+// Limitation 3: No prototype
+const arrow = () => {};
+console.log(arrow.prototype);  // undefined
+
+// Limitation 4: Cannot use 'super'
+class Parent {
+    constructor() {
+        this.type = "parent";
+    }
+}
+
+class Child extends Parent {
+    constructor() {
+        super();
+        // const method = () => {
+        //     super.constructor();  // SyntaxError
+        // };
+    }
+}
+```
+
+### **11.7 This in Event Handlers**
+
+#### **DOM Event Handlers:**
+
+```javascript
+// Example HTML: <button id="myButton">Click me</button>
+
+const button = document.getElementById('myButton');
+
+// Regular function: 'this' = element
+button.addEventListener('click', function(event) {
+    console.log(this);  // <button> element
+    console.log(this.textContent);  // "Click me"
+    this.style.backgroundColor = 'blue';
+});
+
+// Arrow function: 'this' from enclosing scope
+button.addEventListener('click', (event) => {
+    console.log(this);  // Window/undefined (not button!)
+    // this.style.backgroundColor = 'blue';  // Error!
+    
+    // Use event.currentTarget instead:
+    event.currentTarget.style.backgroundColor = 'blue';
+});
+
+/*
+═══════════════════════════════════════════════════════════
+EVENT HANDLER 'THIS' RULES
+═══════════════════════════════════════════════════════════
+
+Regular function:
+- this = element that handler is attached to
+- this = event.currentTarget
+- Set by browser's event dispatch
+
+Arrow function:
+- this = inherited from enclosing scope
+- NOT the element
+- Use event.currentTarget to access element
+*/
+```
+
+#### **Event Handlers in Classes:**
+
+```javascript
+class ClickCounter {
+    constructor(buttonId) {
+        this.count = 0;
+        this.button = document.getElementById(buttonId);
+        
+        // Method 1: Arrow function property (recommended)
+        this.handleClickArrow = () => {
+            this.count++;
+            console.log(`Arrow: ${this.count}`);
+        };
+        
+        // Attach handlers
+        this.attachHandlers();
+    }
+    
+    // Method 2: Regular method
+    handleClickRegular(event) {
+        this.count++;
+        console.log(`Regular: ${this.count}`);
+    }
+    
+    attachHandlers() {
+        // This works (arrow function)
+        this.button.addEventListener('click', this.handleClickArrow);
+        
+        // This doesn't work (lost context)
+        // this.button.addEventListener('click', this.handleClickRegular);
+        
+        // Fix 1: Bind in constructor
+        // this.handleClickRegular = this.handleClickRegular.bind(this);
+        // this.button.addEventListener('click', this.handleClickRegular);
+        
+        // Fix 2: Arrow wrapper
+        // this.button.addEventListener('click', (e) => {
+        //     this.handleClickRegular(e);
+        // });
+        
+        // Fix 3: Bind inline
+        // this.button.addEventListener('click', 
+        //     this.handleClickRegular.bind(this));
+    }
+}
+
+const counter = new ClickCounter('myButton');
+
+/*
+═══════════════════════════════════════════════════════════
+CLASS EVENT HANDLERS BEST PRACTICES
+═══════════════════════════════════════════════════════════
+
+✓ RECOMMENDED: Arrow function as class property
+class Component {
+    handleClick = () => {
+        // 'this' always bound to instance
+    }
+}
+
+Pros:
+- Automatically bound
+- Clean syntax
+- Easy to remove listener
+- No memory leaks from repeated binding
+
+Cons:
+- Each instance gets own function copy
+- Slightly more memory per instance
+
+✗ AVOID: Regular method without binding
+class Component {
+    handleClick() {
+        // 'this' context lost!
+    }
+    
+    attach() {
+        button.onclick = this.handleClick;  // Wrong!
+    }
+}
+
+✓ ACCEPTABLE: Bind in constructor
+class Component {
+    constructor() {
+        this.handleClick = this.handleClick.bind(this);
+    }
+    
+    handleClick() {
+        // 'this' bound to instance
+    }
+}
+*/
+```
+
+### **11.8 This in Strict Mode vs Non-Strict Mode**
+
+#### **Strict Mode Impact on 'this':**
+
+```javascript
+// Non-strict mode
+function nonStrict() {
+    console.log(this);
+}
+
+nonStrict();  // Window (global object)
+
+// Strict mode
+function strict() {
+    'use strict';
+    console.log(this);
+}
+
+strict();  // undefined
+
+/*
+═══════════════════════════════════════════════════════════
+STRICT MODE CHANGES TO 'THIS'
+═══════════════════════════════════════════════════════════
+
+╔════════════════════╦══════════════╦══════════════╗
+║   Context          ║  Non-Strict  ║    Strict    ║
+╠════════════════════╬══════════════╬══════════════╣
+║ Global             ║ Global obj   ║  Global obj  ║
+║ Regular function   ║ Global obj   ║  undefined   ║
+║ Method             ║ Object       ║  Object      ║
+║ Constructor (new)  ║ New obj      ║  New obj     ║
+║ call/apply/bind    ║ Provided obj ║  Provided obj║
+║ Arrow function     ║ Lexical      ║  Lexical     ║
+╚════════════════════╩══════════════╩══════════════╝
+
+Key difference:
+- Regular function calls: undefined (strict) vs global (non-strict)
+*/
+```
+
+#### **Detailed Strict Mode Examples:**
+
+```javascript
+'use strict';
+
+// Example 1: Function calls
+function func() {
+    console.log(this);
+}
+
+func();  // undefined (not global!)
+
+// Example 2: Still works with context
+const obj = {
+    method: func
+};
+
+obj.method();  // obj (still works!)
+
+// Example 3: Prevents accidental globals
+function createGlobal() {
+    // Non-strict: creates global variable
+    // Strict: ReferenceError
+    // accidentalGlobal = "oops";
+}
+
+// Example 4: call with primitive
+function showThis() {
+    console.log(this);
+    console.log(typeof this);
+}
+
+// Non-strict mode
+showThis.call(5);      // Number {5} (boxed)
+showThis.call("str");  // String {"str"} (boxed)
+showThis.call(true);   // Boolean {true} (boxed)
+
+// Strict mode
+('use strict');
+showThis.call(5);      // 5 (not boxed)
+showThis.call("str");  // "str" (not boxed)
+showThis.call(true);   // true (not boxed)
+showThis.call(null);   // null (not converted)
+showThis.call(undefined); // undefined (not converted)
+
+/*
+═══════════════════════════════════════════════════════════
+BOXING IN NON-STRICT MODE
+═══════════════════════════════════════════════════════════
+
+Non-strict mode automatically boxes primitives:
+
+showThis.call(5)
+↓ Boxing
+showThis.call(new Number(5))
+
+This is called "boxing" or "wrapping"
+
+Strict mode: NO BOXING
+- Primitives stay primitives
+- null/undefined stay null/undefined
+- More predictable behavior
+*/
+```
+
+---
+
+## **12. CONTROLLING 'THIS'**
+
+### **12.1 call() Method**
+
+The **`call()`** method calls a function with a specified `this` value and arguments provided individually.
+
+#### **call() Basics:**
+
+```javascript
+function greet(greeting, punctuation) {
+    console.log(greeting + ", " + this.name + punctuation);
+}
+
+const person1 = { name: "John" };
+const person2 = { name: "Jane" };
+
+// Call with different contexts
+greet.call(person1, "Hello", "!");  // "Hello, John!"
+greet.call(person2, "Hi", ".");     // "Hi, Jane."
+
+/*
+═══════════════════════════════════════════════════════════
+CALL() SYNTAX
+═══════════════════════════════════════════════════════════
+
+function.call(thisArg, arg1, arg2, ...)
+
+Parameters:
+- thisArg: Value of 'this' inside function
+- arg1, arg2, ...: Arguments passed to function
+
+Returns:
+- Result of calling function
+
+Process:
+1. Set function's 'this' to thisArg
+2. Execute function with provided arguments
+3. Return function's return value
+
+greet.call(person1, "Hello", "!")
+
+Step 1: Create execution context
+  ThisBinding: person1
+
+Step 2: Pass arguments
+  greeting: "Hello"
+  punctuation: "!"
+
+Step 3: Execute function body
+  console.log("Hello, " + person1.name + "!")
+  Output: "Hello, John!"
+*/
+```
+
+#### **call() Detailed Examples:**
+
+```javascript
+// Example 1: Method borrowing
+const person = {
+    name: "John",
+    greet: function() {
+        console.log("Hello, " + this.name);
+    }
+};
+
+const anotherPerson = { name: "Jane" };
+
+// Borrow person's method
+person.greet.call(anotherPerson);  // "Hello, Jane"
+
+/*
+Method borrowing:
+- Take method from one object
+- Use it with another object
+- 'this' set to the other object
+*/
+
+// Example 2: Constructor chaining
+function Animal(name) {
+    this.name = name;
+    this.type = "animal";
+}
+
+function Dog(name, breed) {
+    // Call parent constructor
+    Animal.call(this, name);
+    this.breed = breed;
+}
+
+const dog = new Dog("Buddy", "Golden Retriever");
+console.log(dog.name);   // "Buddy"
+console.log(dog.type);   // "animal"
+console.log(dog.breed);  // "Golden Retriever"
+
+/*
+Constructor chaining process:
+
+1. new Dog() creates empty object
+2. this = empty object
+3. Animal.call(this, name) calls Animal with this = empty object
+4. Animal sets this.name and this.type
+5. Dog sets this.breed
+6. Return this
+
+Result: {
+    name: "Buddy",
+    type: "animal",
+    breed: "Golden Retriever"
+}
+*/
+
+// Example 3: Array-like object manipulation
+function logArguments() {
+    // 'arguments' is array-like, not real array
+    console.log(Array.isArray(arguments));  // false
+    
+    // Borrow Array methods
+    const args = Array.prototype.slice.call(arguments);
+    console.log(Array.isArray(args));  // true
+    
+    // Or use Array.from (modern)
+    const args2 = Array.from(arguments);
+    
+    return args;
+}
+
+logArguments(1, 2, 3, 4);
+
+/*
+Array method borrowing:
+- arguments is array-like (has length, indexed)
+- NOT a real array (no array methods)
+- Borrow array methods with call
+- Array.prototype.slice.call(arguments)
+  → calls slice with this = arguments
+  → returns real array
+*/
+
+// Example 4: Finding max in array-like
+function findMax() {
+    return Math.max.call(null, ...arguments);
+    // Or: Math.max.apply(null, arguments)
+}
+
+console.log(findMax(1, 5, 3, 9, 2));  // 9
+
+/*
+Math.max.call(null, 1, 5, 3, 9, 2)
+- Math.max doesn't use 'this', so null is fine
+- Arguments passed individually
+- Returns 9
+*/
+```
+
+#### **call() Advanced Patterns:**
+
+```javascript
+// Pattern 1: Generic utility functions
+const arrayUtils = {
+    forEach: function(callback, thisArg) {
+        for (let i = 0; i < this.length; i++) {
+            callback.call(thisArg, this[i], i, this);
+        }
+    },
+    
+    map: function(callback, thisArg) {
+        const result = [];
+        for (let i = 0; i < this.length; i++) {
+            result.push(callback.call(thisArg, this[i], i, this));
+        }
+        return result;
+    }
+};
+
+// Use with array-like object
+const arrayLike = {
+    0: 'a',
+    1: 'b',
+    2: 'c',
+    length: 3
+};
+
+arrayUtils.forEach.call(arrayLike, function(item) {
+    console.log(item);
+});
+// Output: a, b, c
+
+// Pattern 2: Polymorphism
+function processData(data) {
+    // Different processing based on type
+    const processors = {
+        string: function() {
+            return this.toUpperCase();
+        },
+        number: function() {
+            return this * 2;
+        },
+        boolean: function() {
+            return !this;
+        }
+    };
+    
+    const processor = processors[typeof data];
+    return processor ? processor.call(data) : data;
+}
+
+console.log(processData("hello"));  // "HELLO"
+console.log(processData(5));        // 10
+console.log(processData(true));     // false
+
+// Pattern 3: Function composition with context
+function compose(...fns) {
+    return function(...args) {
+        return fns.reduceRight((result, fn) => {
+            return Array.isArray(result)
+                ? fn.call(this, ...result)
+                : fn.call(this, result);
+        }, args);
+    };
+}
+
+const obj = { multiplier: 2 };
+
+const double = function(x) {
+    return x * this.multiplier;
+};
+
+const addTen = function(x) {
+    return x + 10;
+};
+
+const composed = compose(addTen, double);
+console.log(composed.call(obj, 5));  // (5 * 2) + 10 = 20
+```
+
+### **12.2 apply() Method**
+
+The **`apply()`** method is similar to `call()`, but accepts arguments as an array.
+
+#### **apply() Basics:**
+
+```javascript
+function greet(greeting, punctuation) {
+    console.log(greeting + ", " + this.name + punctuation);
+}
+
+const person = { name: "John" };
+
+// apply with array of arguments
+greet.apply(person, ["Hello", "!"]);  // "Hello, John!"
+
+// call with individual arguments
+greet.call(person, "Hello", "!");     // "Hello, John!"
+
+/*
+═══════════════════════════════════════════════════════════
+APPLY() VS CALL()
+═══════════════════════════════════════════════════════════
+
+Syntax:
+function.call(thisArg, arg1, arg2, ...)
+function.apply(thisArg, [arg1, arg2, ...])
+
+The ONLY difference:
+- call: arguments passed individually
+- apply: arguments passed as array
+
+When to use each:
+- call: When you know arguments ahead of time
+- apply: When arguments are already in an array
+*/
+```
+
+#### **apply() Use Cases:**
+
+```javascript
+// Use Case 1: Math.max with array
+const numbers = [5, 6, 2, 3, 7];
+
+// Can't do: Math.max(numbers) → NaN
+// Need: Math.max(5, 6, 2, 3, 7)
+
+const max = Math.max.apply(null, numbers);
+console.log(max);  // 7
+
+// Modern alternative: spread operator
+const max2 = Math.max(...numbers);
+console.log(max2);  // 7
+
+/*
+apply is perfect when:
+- Function expects individual arguments
+- You have arguments in an array
+- Before ES6 spread operator
+
+Math.max.apply(null, [5, 6, 2, 3, 7])
+↓ Equivalent to
+Math.max(5, 6, 2, 3, 7)
+*/
+
+// Use Case 2: Array concatenation (legacy)
+const array1 = [1, 2, 3];
+const array2 = [4, 5, 6];
+
+// Old way:
+Array.prototype.push.apply(array1, array2);
+console.log(array1);  // [1, 2, 3, 4, 5, 6]
+
+// Modern way:
+array1.push(...array2);
+
+/*
+Array.prototype.push.apply(array1, array2)
+↓ Equivalent to
+array1.push(4, 5, 6)
+*/
+
+// Use Case 3: Constructor with array of arguments
+function Person(firstName, lastName, age) {
+    this.firstName = firstName;
+    this.lastName = lastName;
+    this.age = age;
+}
+
+const args = ["John", "Doe", 30];
+
+// Can't use apply with 'new' directly!
+// const person = new Person.apply(null, args); // Error!
+
+// Solution 1: bind
+const BoundPerson = Person.bind(null, ...args);
+const person = new BoundPerson();
+
+// Solution 2: Factory function
+function createPerson(...args) {
+    return new Person(...args);
+}
+
+const person2 = createPerson(...args);
+
+console.log(person);   // Person { firstName: "John", lastName: "Doe", age: 30 }
+console.log(person2);  // Person { firstName: "John", lastName: "Doe", age: 30 }
+```
+
+#### **apply() with Variable Arguments:**
+
+```javascript
+// Example: Logging utility
+const logger = {
+    prefix: "[LOG]",
+    
+    log: function() {
+        const args = Array.prototype.slice.call(arguments);
+        const message = this.prefix + " " + args.join(" ");
+        console.log(message);
+    }
+};
+
+// Use apply to pass variable arguments
+function logWithTimestamp() {
+    const timestamp = new Date().toISOString();
+    const args = [timestamp].concat(Array.prototype.slice.call(arguments));
+    
+    logger.log.apply(logger, args);
+}
+
+logWithTimestamp("User logged in");
+// [LOG] 2024-01-01T12:00:00.000Z User logged in
+
+logWithTimestamp("Error occurred:", "File not found");
+// [LOG] 2024-01-01T12:00:00.000Z Error occurred: File not found
+
+// Example: Flexible calculator
+const calculator = {
+    operation: "add",
+    
+    calculate: function() {
+        const numbers = Array.prototype.slice.call(arguments);
+        
+        switch(this.operation) {
+            case "add":
+                return numbers.reduce((a, b) => a + b, 0);
+            case "multiply":
+                return numbers.reduce((a, b) => a * b, 1);
+            case "max":
+                return Math.max.apply(null, numbers);
+            case "min":
+                return Math.min.apply(null, numbers);
+        }
+    }
+};
+
+const numbers = [1, 2, 3, 4, 5];
+
+calculator.operation = "add";
+console.log(calculator.calculate.apply(calculator, numbers));  // 15
+
+calculator.operation = "multiply";
+console.log(calculator.calculate.apply(calculator, numbers));  // 120
+
+calculator.operation = "max";
+console.log(calculator.calculate.apply(calculator, numbers));  // 5
+```
+
+### **12.3 bind() Method**
+
+The **`bind()`** method creates a new function with a permanently bound `this` value and optional preset arguments.
+
+#### **bind() Basics:**
+
+```javascript
+function greet(greeting, punctuation) {
+    console.log(greeting + ", " + this.name + punctuation);
+}
+
+const person = { name: "John" };
+
+// Create bound function
+const greetJohn = greet.bind(person);
+
+greetJohn("Hello", "!");  // "Hello, John!"
+greetJohn("Hi", ".");     // "Hi, John."
+
+// 'this' is permanently bound
+greetJohn.call({ name: "Jane" }, "Hey", "?");  // Still "Hey, John!"
+
+/*
+═══════════════════════════════════════════════════════════
+BIND() CHARACTERISTICS
+═══════════════════════════════════════════════════════════
+
+Key differences from call/apply:
+1. Returns NEW function (doesn't execute immediately)
+2. 'this' is PERMANENTLY bound (cannot be changed)
+3. Can preset arguments (partial application)
+
+Syntax:
+const boundFn = function.bind(thisArg, arg1, arg2, ...)
+
+Process:
+1. Create new function
+2. Set its internal [[BoundThis]] to thisArg
+3. Set its internal [[BoundArgs]] to provided args
+4. When called, use [[BoundThis]] and prepend [[BoundArgs]]
+
+greet.bind(person)
+↓ Creates
+function boundGreet() {
+    return greet.apply(person, arguments);
+}
+*/
+```
+
+#### **bind() Use Cases:**
+
+```javascript
+// Use Case 1: Event handlers
+class Button {
+    constructor(label) {
+        this.label = label;
+        this.clicks = 0;
+    }
+    
+    handleClick() {
+        this.clicks++;
+        console.log(`${this.label} clicked ${this.clicks} times`);
+    }
+    
+    attachToElement(element) {
+        // Without bind: 'this' would be the element
+        element.addEventListener('click', this.handleClick.bind(this));
+    }
+}
+
+const submitButton = new Button("Submit");
+// submitButton.attachToElement(document.getElementById('submit'));
+
+/*
+Without bind:
+element.addEventListener('click', this.handleClick)
+→ When clicked: this = element ✗
+
+With bind:
+element.addEventListener('click', this.handleClick.bind(this))
+→ When clicked: this = Button instance ✓
+*/
+
+// Use Case 2: setTimeout/setInterval
+const timer = {
+    seconds: 0,
+    
+    start: function() {
+        // Without bind:
+        // setInterval(this.tick, 1000); // 'this' would be global
+        
+        // With bind:
+        setInterval(this.tick.bind(this), 1000);
+    },
+    
+    tick: function() {
+        this.seconds++;
+        console.log(this.seconds);
+    }
+};
+
+// timer.start();  // 1, 2, 3, ...
+
+// Use Case 3: Callback functions
+const processor = {
+    prefix: "Processed: ",
+    
+    processArray: function(array) {
+        return array.map(this.addPrefix.bind(this));
+    },
+    
+    addPrefix: function(item) {
+        return this.prefix + item;
+    }
+};
+
+const result = processor.processArray(["A", "B", "C"]);
+console.log(result);  // ["Processed: A", "Processed: B", "Processed: C"]
+
+/*
+Without bind:
+array.map(this.addPrefix)
+→ addPrefix called with this = undefined ✗
+
+With bind:
+array.map(this.addPrefix.bind(this))
+→ addPrefix called with this = processor ✓
+*/
+
+// Use Case 4: Method extraction
+const person = {
+    name: "John",
+    greet: function() {
+        console.log("Hello, " + this.name);
+    }
+};
+
+// Extract method
+const greet = person.greet;
+greet();  // "Hello, undefined" ✗
+
+// Extract with bind
+const greetBound = person.greet.bind(person);
+greetBound();  // "Hello, John" ✓
+
+// Use in different context
+setTimeout(person.greet, 1000);        // "Hello, undefined" ✗
+setTimeout(person.greet.bind(person), 1000); // "Hello, John" ✓
+```
+
+#### **Partial Application with bind():**
+
+```javascript
+// Partial application: preset some arguments
+function multiply(a, b) {
+    return a * b;
+}
+
+// Create specialized versions
+const double = multiply.bind(null, 2);
+const triple = multiply.bind(null, 3);
+
+console.log(double(5));  // 10 (2 * 5)
+console.log(triple(5));  // 15 (3 * 5)
+
+/*
+multiply.bind(null, 2)
+Creates: function(b) { return multiply(2, b); }
+
+When double(5) is called:
+→ multiply(2, 5)
+→ return 10
+*/
+
+// Example: Logging with prefix
+function log(level, message) {
+    console.log(`[${level}] ${message}`);
+}
+
+const info = log.bind(null, "INFO");
+const error = log.bind(null, "ERROR");
+const warn = log.bind(null, "WARN");
+
+info("Application started");   // [INFO] Application started
+error("File not found");        // [ERROR] File not found
+warn("Deprecated API used");    // [WARN] Deprecated API used
+
+// Example: Preset multiple arguments
+function greet(greeting, name, punctuation) {
+    console.log(`${greeting}, ${name}${punctuation}`);
+}
+
+const greetJohn = greet.bind(null, "Hello", "John");
+greetJohn("!");  // "Hello, John!"
+greetJohn(".");  // "Hello, John."
+
+const sayHello = greet.bind(null, "Hello");
+sayHello("Jane", "!");  // "Hello, Jane!"
+sayHello("Bob", "?");   // "Hello, Bob?"
+
+/*
+Argument merging:
+
+greet.bind(null, "Hello", "John")
+→ greetJohn("!")
+→ greet("Hello", "John", "!")
+
+greet.bind(null, "Hello")
+→ sayHello("Jane", "!")
+→ greet("Hello", "Jane", "!")
+*/
+```
+
+#### **bind() Advanced Patterns:**
+
+```javascript
+// Pattern 1: Currying with bind
+function volume(length, width, height) {
+    return length * width * height;
+}
+
+const volumeWith10 = volume.bind(null, 10);
+const volumeWith10And20 = volumeWith10.bind(null, 20);
+
+console.log(volumeWith10And20(30));  // 6000 (10 * 20 * 30)
+
+/*
+Currying chain:
+volume(l, w, h)
+→ volumeWith10(w, h) = volume(10, w, h)
+→ volumeWith10And20(h) = volume(10, 20, h)
+→ volumeWith10And20(30) = volume(10, 20, 30) = 6000
+*/
+
+// Pattern 2: Method binding in constructor
+class Component {
+    constructor(name) {
+        this.name = name;
+        
+        // Bind all methods in constructor
+        this.handleClick = this.handleClick.bind(this);
+        this.handleHover = this.handleHover.bind(this);
+    }
+    
+    handleClick() {
+        console.log(`${this.name} clicked`);
+    }
+    
+    handleHover() {
+        console.log(`${this.name} hovered`);
+    }
+}
+
+const comp = new Component("Button");
+const click = comp.handleClick;
+click();  // "Button clicked" ✓ (bound in constructor)
+
+// Pattern 3: Polyfill for bind (educational)
+if (!Function.prototype.bind) {
+    Function.prototype.bind = function(thisArg) {
+        const fn = this;
+        const args = Array.prototype.slice.call(arguments, 1);
+        
+        return function() {
+            const allArgs = args.concat(
+                Array.prototype.slice.call(arguments)
+            );
+            return fn.apply(thisArg, allArgs);
+        };
+    };
+}
+
+/*
+How bind polyfill works:
+
+function multiply(a, b) { return a * b; }
+const double = multiply.bind(null, 2);
+
+Creates:
+function boundMultiply() {
+    const allArgs = [2].concat(Array.from(arguments));
+    return multiply.apply(null, allArgs);
+}
+
+double(5) → boundMultiply(5)
+→ allArgs = [2, 5]
+→ multiply.apply(null, [2, 5])
+→ multiply(2, 5)
+→ 10
+*/
+
+// Pattern 4: bind with 'new' (special behavior)
+function Point(x, y) {
+    this.x = x;
+    this.y = y;
+}
+
+const BoundPoint = Point.bind(null, 10);
+
+const p1 = new BoundPoint(20);
+console.log(p1.x);  // 10 (preset)
+console.log(p1.y);  // 20 (provided)
+
+/*
+Special behavior with 'new':
+- Bound 'this' is IGNORED
+- new creates its own 'this'
+- Preset arguments still used
+
+new BoundPoint(20)
+↓
+new Point(10, 20)
+↓
+{ x: 10, y: 20 }
+*/
+```
+
+### **12.4 Comparing call, apply, and bind**
+
+#### **Comprehensive Comparison:**
+
+```javascript
+function greet(greeting, punctuation) {
+    console.log(`${greeting}, ${this.name}${punctuation}`);
+}
+
+const person = { name: "John" };
+
+// CALL: Execute immediately, arguments individually
+greet.call(person, "Hello", "!");
+// Output: "Hello, John!"
+
+// APPLY: Execute immediately, arguments as array
+greet.apply(person, ["Hello", "!"]);
+// Output: "Hello, John!"
+
+// BIND: Return new function, doesn't execute
+const greetJohn = greet.bind(person);
+greetJohn("Hello", "!");
+// Output: "Hello, John!"
+
+/*
+═══════════════════════════════════════════════════════════
+COMPARISON TABLE
+═══════════════════════════════════════════════════════════
+
+╔════════════════╦═══════════╦═══════════╦═══════════╗
+║   Feature      ║   call    ║   apply   ║   bind    ║
+╠════════════════╬═══════════╬═══════════╬═══════════╣
+║ Executes?      ║    Yes    ║    Yes    ║    No     ║
+║ Returns        ║  Result   ║  Result   ║  Function ║
+║ Arguments      ║Individual ║   Array   ║Individual ║
+║ 'this' binding ║ Temporary ║ Temporary ║ Permanent ║
+║ Can preset args║    No     ║    No     ║    Yes    ║
+║ Use case       ║One-time   ║Array args ║Reuse      ║
+╚════════════════╩═══════════╩═══════════╩═══════════╝
+
+═══════════════════════════════════════════════════════════
+WHEN TO USE EACH
+═══════════════════════════════════════════════════════════
+
+USE CALL WHEN:
+✓ You want to execute immediately
+✓ You know arguments individually
+✓ One-time context change
+
+USE APPLY WHEN:
+✓ You want to execute immediately
+✓ Arguments are in an array
+✓ Spreading array to function
+
+USE BIND WHEN:
+✓ You want to reuse the function
+✓ Event handlers / callbacks
+✓ Partial application
+✓ Permanent 'this' binding
+*/
+```
+
+#### **Performance Comparison:**
+
+```javascript
+// Performance test (simplified)
+const obj = { name: "Test" };
+
+function test() {
+    return this.name;
+}
+
+console.time("call");
+for (let i = 0; i < 1000000; i++) {
+    test.call(obj);
+}
+console.timeEnd("call");
+
+console.time("apply");
+for (let i = 0; i < 1000000; i++) {
+    test.apply(obj);
+}
+console.timeEnd("apply");
+
+console.time("bind");
+const bound = test.bind(obj);
+for (let i = 0; i < 1000000; i++) {
+    bound();
+}
+console.timeEnd("bind");
+
+/*
+Typical results (relative):
+call:  ~fast
+apply: ~slightly slower (array handling)
+bind:  ~fastest for repeated calls (bound once, called many times)
+
+Performance notes:
+1. call is generally fastest for single use
+2. apply has slight overhead from array processing
+3. bind creates new function (one-time cost)
+   but very fast for subsequent calls
+4. For repeated calls with same context: bind is best
+5. For one-time calls: call is sufficient
+*/
+```
+
+#### **Real-World Comparison Examples:**
+
+```javascript
+// Scenario 1: Math operations with arrays
+const numbers = [1, 2, 3, 4, 5];
+
+// With apply (traditional)
+const max1 = Math.max.apply(null, numbers);
+
+// With call (needs spreading)
+// const max2 = Math.max.call(null, ...numbers); // Same as regular call
+
+// With bind (unnecessary here)
+// const maxBound = Math.max.bind(null);
+// const max3 = maxBound(...numbers);
+
+// Modern: spread operator
+const max4 = Math.max(...numbers);
+
+console.log(max1);  // 5
+console.log(max4);  // 5
+
+// WINNER: apply (or spread) - perfect for array to arguments
+
+// Scenario 2: Event handler
+class ClickCounter {
+    constructor() {
+        this.count = 0;
+    }
+    
+    increment() {
+        this.count++;
+        console.log(this.count);
+    }
+    
+    attachWithCall(element) {
+        // Won't work - call executes immediately!
+        // element.onclick = this.increment.call(this);
+    }
+    
+    attachWithApply(element) {
+        // Won't work - apply executes immediately!
+        // element.onclick = this.increment.apply(this);
+    }
+    
+    attachWithBind(element) {
+        // Works! bind returns function for later
+        element.onclick = this.increment.bind(this);
+    }
+}
+
+// WINNER: bind - perfect for callbacks
+
+// Scenario 3: Constructor chaining
+function Animal(name) {
+    this.name = name;
+}
+
+function Dog(name, breed) {
+    // With call (common)
+    Animal.call(this, name);
+    this.breed = breed;
+}
+
+function Cat(name, color) {
+    // With apply (if args in array)
+    const args = [name];
+    Animal.apply(this, args);
+    this.color = color;
+}
+
+// WINNER: call - cleaner for constructor chaining
+
+// Scenario 4: Partial application
+function greet(greeting, name, punctuation) {
+    console.log(`${greeting}, ${name}${punctuation}`);
+}
+
+// With bind (perfect for partial application)
+const greetHello = greet.bind(null, "Hello");
+greetHello("John", "!");  // "Hello, John!"
+greetHello("Jane", ".");  // "Hello, Jane."
+
+// With call/apply (need wrapper)
+function greetHelloCall(name, punctuation) {
+    greet.call(null, "Hello", name, punctuation);
+}
+
+// WINNER: bind - built-in partial application
+
+// Scenario 5: Array method borrowing
+const arrayLike = {
+    0: 'a',
+    1: 'b',
+    2: 'c',
+    length: 3
+};
+
+// With call
+const arr1 = Array.prototype.slice.call(arrayLike);
+
+// With apply
+const arr2 = Array.prototype.slice.apply(arrayLike);
+
+// Modern: Array.from
+const arr3 = Array.from(arrayLike);
+
+console.log(arr1);  // ['a', 'b', 'c']
+console.log(arr2);  // ['a', 'b', 'c']
+console.log(arr3);  // ['a', 'b', 'c']
+
+// WINNER: call or Array.from - call is traditional, Array.from is modern
+```
+
+### **12.5 When to Use Each Method**
+
+#### **Decision Tree:**
+
+```javascript
+/*
+═══════════════════════════════════════════════════════════
+DECISION TREE: CHOOSING call, apply, OR bind
+═══════════════════════════════════════════════════════════
+
+START
+  │
+  ├─ Need to execute NOW?
+  │  │
+  │  ├─ YES
+  │  │  │
+  │  │  ├─ Arguments in array?
+  │  │  │  │
+  │  │  │  ├─ YES → use APPLY
+  │  │  │  │  Example: Math.max.apply(null, numbersArray)
+  │  │  │  │
+  │  │  │  └─ NO → use CALL
+  │  │  │     Example: greet.call(person, "Hello", "!")
+  │  │  │
+  │  │  └─ (or use modern spread operator)
+  │  │
+  │  └─ NO (need function for later)
+  │     │
+  │     └─ Use BIND
+  │        Examples:
+  │        - Event handlers
+  │        - Callbacks
+  │        - Partial application
+  │        - Reusable bound functions
+  │
+END
+*/
+```
+
+#### **Practical Guidelines:**
+
+```javascript
+// GUIDELINE 1: Event Handlers → bind
+class Component {
+    constructor() {
+        this.handleClick = this.handleClick.bind(this);
+        // ✓ Bound once in constructor
+    }
+    
+    handleClick() {
+        console.log(this);
+    }
+}
+
+// GUIDELINE 2: Constructor Chaining → call
+function Parent(name) {
+    this.name = name;
+}
+
+function Child(name, age) {
+    Parent.call(this, name);  // ✓ Clear and simple
+    this.age = age;
+}
+
+// GUIDELINE 3: Array Operations → apply (or spread)
+const numbers = [1, 2, 3, 4, 5];
+
+// Traditional
+const max = Math.max.apply(null, numbers);  // ✓ Works
+
+// Modern (preferred)
+const max2 = Math.max(...numbers);  // ✓ Cleaner
+
+// GUIDELINE 4: Method Borrowing → call
+const arrayLike = { 0: 'a', 1: 'b', length: 2 };
+
+// With call
+const arr = Array.prototype.slice.call(arrayLike);  // ✓ Traditional
+
+// Modern (preferred)
+const arr2 = Array.from(arrayLike);  // ✓ Cleaner
+
+// GUIDELINE 5: Callbacks with Context → bind
+const obj = {
+    name: "Object",
+    method: function() {
+        console.log(this.name);
+    }
+};
+
+// Callback without bind
+setTimeout(obj.method, 1000);  // ✗ Context lost
+
+// Callback with bind
+setTimeout(obj.method.bind(obj), 1000);  // ✓ Context preserved
+
+// GUIDELINE 6: Partial Application → bind
+function log(level, message) {
+    console.log(`[${level}] ${message}`);
+}
+
+const info = log.bind(null, "INFO");  // ✓ Perfect use case
+info("Server started");  // [INFO] Server started
+
+// GUIDELINE 7: One-time Context Change → call
+function showName() {
+    console.log(this.name);
+}
+
+const person = { name: "John" };
+showName.call(person);  // ✓ Simple one-time use
+```
+
+#### **Modern Alternatives:**
+
+```javascript
+// ALTERNATIVE 1: Arrow functions instead of bind
+class Component {
+    constructor() {
+        this.name = "Component";
+    }
+    
+    // Old way: Regular method + bind
+    handleClickOld() {
+        console.log(this.name);
+    }
+    // Attach: element.onclick = this.handleClickOld.bind(this);
+    
+    // New way: Arrow function property
+    handleClickNew = () => {
+        console.log(this.name);
+    }
+    // Attach: element.onclick = this.handleClickNew;
+}
+
+// ALTERNATIVE 2: Spread operator instead of apply
+const numbers = [1, 2, 3, 4, 5];
+
+// Old way
+const max1 = Math.max.apply(null, numbers);
+
+// New way
+const max2 = Math.max(...numbers);
+
+// ALTERNATIVE 3: Array.from instead of slice.call
+const arrayLike = { 0: 'a', 1: 'b', length: 2 };
+
+// Old way
+const arr1 = Array.prototype.slice.call(arrayLike);
+
+// New way
+const arr2 = Array.from(arrayLike);
+
+// ALTERNATIVE 4: Rest parameters instead of arguments
+// Old way
+function oldSum() {
+    const args = Array.prototype.slice.call(arguments);
+    return args.reduce((a, b) => a + b, 0);
+}
+
+// New way
+function newSum(...numbers) {
+    return numbers.reduce((a, b) => a + b, 0);
+}
+
+/*
+Modern JavaScript reduces need for call/apply/bind:
+✓ Arrow functions (lexical this)
+✓ Spread operator (array to arguments)
+✓ Array.from (array-like to array)
+✓ Rest parameters (arguments handling)
+✓ Class field syntax (auto-bound methods)
+
+But call/apply/bind still useful for:
+✓ Constructor chaining
+✓ Method borrowing
+✓ Dynamic context changes
+✓ Partial application
+✓ Legacy code compatibility
+*/
+```
+
+---
 
 
 
