@@ -1613,7 +1613,6 @@ Context Hierarchy:
 
 ---
 
-# **PART 2: DEEP DIVE INTO COMPONENTS**
 
 ## **3. THE EXECUTION CONTEXT STACK (CALL STACK)**
 
@@ -2444,36 +2443,4992 @@ factorial(4) = 24
 
 ---
 
-Due to character limitations, I've provided an extremely detailed first portion. This is significantly more comprehensive than the previous version with:
+# **PART 2: DEEP DIVE INTO COMPONENTS**
 
-- Much more detailed explanations
-- More code examples
-- Better visualizations
-- Step-by-step execution traces
-- Real-world scenarios
+## **4. ANATOMY OF EXECUTION CONTEXT**
 
-**HOW TO CONVERT TO PDF:**
+### **4.1 The Three Pillars**
 
-Since I cannot create PDFs directly, here are the best methods:
+Every execution context is built on three main components:
 
-**Method 1: Copy to Google Docs**
-1. Copy all this text
-2. Paste into Google Docs
-3. File → Download → PDF
+1. **Variable Environment**
+2. **Lexical Environment**
+3. **This Binding**
 
-**Method 2: Copy to Microsoft Word**
-1. Copy text
-2. Paste into Word
-3. File → Save As → PDF
+#### **Complete Structure Diagram:**
 
-**Method 3: Use Online Markdown to PDF**
-1. Copy text
-2. Go to markdown-pdf.com or pandoc.org
-3. Convert to PDF
+```javascript
+ExecutionContext = {
+    // Component 1: Variable Environment
+    VariableEnvironment: {
+        EnvironmentRecord: {
+            Type: "Declarative" | "Object",
+            // Storage for var declarations and function declarations
+            // Initialized during creation phase
+        },
+        outer: <reference to outer lexical environment>,
+        ThisBinding: <value of this>
+    },
+    
+    // Component 2: Lexical Environment
+    LexicalEnvironment: {
+        EnvironmentRecord: {
+            Type: "Declarative" | "Object" | "Global",
+            // Storage for let and const declarations
+            // Initially uninitialized (TDZ)
+        },
+        outer: <reference to outer lexical environment>,
+        ThisBinding: <value of this>
+    },
+    
+    // Component 3: This Binding
+    ThisBinding: <determined by how function is called>
+}
+```
 
-**Method 4: Use Browser**
-1. Copy to any text editor
-2. Open in browser
-3. Print → Save as PDF
+#### **Real Example with All Components:**
 
-Would you like me to continue with the remaining parts (4-21) in the same level of detail? Each part will be this comprehensive with extensive examples, visualizations, and explanations.
+```javascript
+const globalConst = "Global Constant";
+
+function demonstrateComponents(param) {
+    var varVariable = "Var Variable";
+    let letVariable = "Let Variable";
+    const constVariable = "Const Variable";
+    
+    function innerFunction() {
+        console.log("Inner");
+    }
+    
+    console.log(this);
+    console.log(arguments);
+}
+
+const obj = { name: "Object" };
+demonstrateComponents.call(obj, "argument1", "argument2");
+
+/*
+EXECUTION CONTEXT FOR demonstrateComponents:
+
+{
+    VariableEnvironment: {
+        EnvironmentRecord: {
+            Type: "Declarative",
+            varVariable: "Var Variable",
+            innerFunction: <function object>,
+            param: "argument1",
+            arguments: {
+                0: "argument1",
+                1: "argument2",
+                length: 2
+            }
+        },
+        outer: <Global Lexical Environment>,
+        ThisBinding: obj
+    },
+    
+    LexicalEnvironment: {
+        EnvironmentRecord: {
+            Type: "Declarative",
+            letVariable: "Let Variable",
+            constVariable: "Const Variable"
+        },
+        outer: <Global Lexical Environment>,
+        ThisBinding: obj
+    },
+    
+    ThisBinding: obj  // Set by .call()
+}
+*/
+```
+
+### **4.2 Variable Environment in Detail**
+
+The **Variable Environment** is a component that stores variable and function declarations made with `var` and function declarations.
+
+#### **What Goes in Variable Environment:**
+
+```javascript
+function variableEnvironmentDemo() {
+    // These go in Variable Environment:
+    var x = 10;
+    var y = 20;
+    
+    function declaredFunction() {
+        return "I'm in Variable Environment";
+    }
+    
+    // These do NOT go in Variable Environment:
+    let a = 30;        // Goes to Lexical Environment
+    const b = 40;      // Goes to Lexical Environment
+    
+    const expr = function() {  // The variable 'expr' goes to Lexical Environment
+        return "Expression";
+    };
+}
+
+/*
+Variable Environment Record:
+{
+    x: 10,
+    y: 20,
+    declaredFunction: <function object>,
+    arguments: {...}
+}
+*/
+```
+
+#### **Variable Environment and Hoisting:**
+
+```javascript
+function hoistingExample() {
+    console.log(hoistedVar);      // undefined
+    console.log(hoistedFunction); // [Function]
+    // console.log(notHoisted);   // ReferenceError
+    
+    var hoistedVar = "I'm hoisted";
+    
+    function hoistedFunction() {
+        return "I'm fully hoisted";
+    }
+    
+    let notHoisted = "I'm in TDZ";
+}
+
+hoistingExample();
+
+/*
+Variable Environment during CREATION PHASE:
+{
+    hoistedVar: undefined,           // Initialized to undefined
+    hoistedFunction: <function obj>, // Fully stored
+    arguments: {...}
+}
+
+Lexical Environment during CREATION PHASE:
+{
+    notHoisted: <uninitialized>      // TDZ
+}
+*/
+```
+
+#### **Variable Environment with Nested Functions:**
+
+```javascript
+function outer() {
+    var outerVar = "Outer";
+    
+    function inner() {
+        var innerVar = "Inner";
+        console.log(outerVar);  // Access through outer reference
+    }
+    
+    inner();
+}
+
+outer();
+
+/*
+OUTER's Variable Environment:
+{
+    EnvironmentRecord: {
+        outerVar: "Outer",
+        inner: <function>
+    },
+    outer: <Global Environment>,
+    ThisBinding: <global>
+}
+
+INNER's Variable Environment (when inner() executes):
+{
+    EnvironmentRecord: {
+        innerVar: "Inner"
+    },
+    outer: <Outer's Environment>,  // Chain link!
+    ThisBinding: <global>
+}
+
+This chain allows inner() to access outerVar!
+*/
+```
+
+### **4.3 Lexical Environment in Detail**
+
+The **Lexical Environment** is similar to Variable Environment but is specifically for `let`, `const`, and function parameters in ES6+.
+
+#### **What Goes in Lexical Environment:**
+
+```javascript
+function lexicalEnvironmentDemo() {
+    // These go in Lexical Environment:
+    let x = 10;
+    const y = 20;
+    
+    // Block scope also creates new Lexical Environment
+    if (true) {
+        let blockScoped = "Block";
+        const alsoBlock = "Also Block";
+        var notBlock = "Function Scoped"; // Goes to Variable Environment
+    }
+    
+    // console.log(blockScoped);  // ReferenceError
+    console.log(notBlock);        // "Function Scoped"
+}
+
+/*
+Function's Lexical Environment:
+{
+    x: 10,
+    y: 20
+}
+
+Block's Lexical Environment (inside if):
+{
+    blockScoped: "Block",
+    alsoBlock: "Also Block"
+}
+
+Variable Environment:
+{
+    notBlock: "Function Scoped"
+}
+*/
+```
+
+#### **Lexical Environment and Block Scope:**
+
+```javascript
+function blockScopeExample() {
+    let outerLet = "Outer";
+    
+    if (true) {
+        // New Lexical Environment created for this block
+        let blockLet = "Block";
+        console.log(outerLet);  // Accessible via outer reference
+        console.log(blockLet);  // In current environment
+    }
+    
+    // console.log(blockLet);  // ReferenceError
+    console.log(outerLet);     // Accessible
+    
+    for (let i = 0; i < 3; i++) {
+        // New Lexical Environment for each iteration!
+        setTimeout(() => console.log(i), 100);
+    }
+    // Outputs: 0, 1, 2 (each iteration has its own 'i')
+}
+
+blockScopeExample();
+
+/*
+Lexical Environment Structure:
+
+Function Level:
+{
+    EnvironmentRecord: { outerLet: "Outer" },
+    outer: <Global>,
+    ThisBinding: <global>
+}
+    ↓
+Block Level (if):
+{
+    EnvironmentRecord: { blockLet: "Block" },
+    outer: <Function Level>,
+    ThisBinding: <inherited>
+}
+    ↓
+Block Level (for - iteration 0):
+{
+    EnvironmentRecord: { i: 0 },
+    outer: <Function Level>,
+    ThisBinding: <inherited>
+}
+    ↓
+Block Level (for - iteration 1):
+{
+    EnvironmentRecord: { i: 1 },
+    outer: <Function Level>,
+    ThisBinding: <inherited>
+}
+*/
+```
+
+#### **Temporal Dead Zone (TDZ) in Lexical Environment:**
+
+```javascript
+function tdzExample() {
+    // TDZ starts here for 'x' and 'y'
+    
+    console.log(varVariable);  // undefined (in Variable Environment)
+    // console.log(x);         // ReferenceError (in TDZ)
+    // console.log(y);         // ReferenceError (in TDZ)
+    
+    var varVariable = "Var";
+    let x = "Let";    // TDZ ends for x
+    const y = "Const"; // TDZ ends for y
+}
+
+/*
+Lexical Environment during Creation Phase:
+{
+    x: <uninitialized>,  // TDZ
+    y: <uninitialized>   // TDZ
+}
+
+Lexical Environment after declarations:
+{
+    x: "Let",
+    y: "Const"
+}
+*/
+```
+
+### **4.4 This Binding Mechanism**
+
+The **This Binding** determines the value of the `this` keyword in the execution context.
+
+#### **This Binding Rules:**
+
+```javascript
+// Rule 1: Default Binding (Global Context)
+function defaultBinding() {
+    console.log(this);  // Global object (non-strict) or undefined (strict)
+}
+defaultBinding();
+
+// Rule 2: Implicit Binding (Method Call)
+const obj = {
+    name: "Object",
+    method: function() {
+        console.log(this.name);  // "Object" - this is obj
+    }
+};
+obj.method();
+
+// Rule 3: Explicit Binding (call, apply, bind)
+function explicitBinding() {
+    console.log(this.name);
+}
+const context = { name: "Context" };
+explicitBinding.call(context);   // "Context"
+explicitBinding.apply(context);  // "Context"
+const bound = explicitBinding.bind(context);
+bound();                          // "Context"
+
+// Rule 4: New Binding (Constructor)
+function Constructor(name) {
+    this.name = name;
+    console.log(this);  // New object
+}
+new Constructor("Instance");
+
+// Rule 5: Arrow Function (Lexical This)
+const objWithArrow = {
+    name: "Object",
+    method: function() {
+        const arrow = () => {
+            console.log(this.name);  // "Object" - inherited from method
+        };
+        arrow();
+    }
+};
+objWithArrow.method();
+
+/*
+This Binding Priority (highest to lowest):
+1. new binding
+2. Explicit binding (call, apply, bind)
+3. Implicit binding (method call)
+4. Default binding (global or undefined)
+5. Arrow functions (lexical, not bound)
+*/
+```
+
+#### **Detailed This Binding Examples:**
+
+```javascript
+// Example 1: Context Loss
+const person = {
+    name: "John",
+    greet: function() {
+        console.log(`Hello, ${this.name}`);
+    }
+};
+
+person.greet();              // "Hello, John" - implicit binding
+const greetFunc = person.greet;
+greetFunc();                 // "Hello, undefined" - default binding
+
+/*
+Execution Context for person.greet():
+{
+    ThisBinding: person  // Implicit binding
+}
+
+Execution Context for greetFunc():
+{
+    ThisBinding: global  // Default binding (context lost!)
+}
+*/
+
+// Example 2: Callbacks and This
+const obj = {
+    name: "Object",
+    delayedGreet: function() {
+        setTimeout(function() {
+            console.log(this.name);  // undefined - 'this' is global
+        }, 100);
+        
+        setTimeout(() => {
+            console.log(this.name);  // "Object" - arrow function preserves 'this'
+        }, 200);
+    }
+};
+
+obj.delayedGreet();
+
+// Example 3: Event Handlers
+document.getElementById('btn').addEventListener('click', function() {
+    console.log(this);  // The button element
+});
+
+document.getElementById('btn').addEventListener('click', () => {
+    console.log(this);  // Window object (lexical)
+});
+
+// Example 4: Nested Functions
+const nested = {
+    name: "Nested",
+    outer: function() {
+        console.log(this.name);  // "Nested"
+        
+        function inner() {
+            console.log(this.name);  // undefined - new context
+        }
+        inner();
+        
+        const innerArrow = () => {
+            console.log(this.name);  // "Nested" - lexical
+        };
+        innerArrow();
+    }
+};
+
+nested.outer();
+```
+
+### **4.5 Environment Records**
+
+**Environment Records** are the actual storage mechanism within environments.
+
+#### **Types of Environment Records:**
+
+```javascript
+/*
+1. Declarative Environment Record
+   - Used for: function scopes, block scopes
+   - Stores: variables, functions, parameters
+
+2. Object Environment Record
+   - Used for: global scope, with statements
+   - Stores: properties on an object (window/global)
+
+3. Global Environment Record
+   - Combination of both
+   - Stores: global variables and built-ins
+*/
+
+// Example 1: Declarative Environment Record
+function declarativeExample() {
+    let x = 10;
+    const y = 20;
+    var z = 30;
+    
+    /*
+    Declarative Environment Record:
+    {
+        x: 10,
+        y: 20,
+        z: 30
+    }
+    */
+}
+
+// Example 2: Object Environment Record (Global)
+var globalVar = "Global";
+let globalLet = "Also Global";
+
+/*
+Global Environment Record has TWO components:
+
+Object Environment Record (bound to window):
+{
+    globalVar: "Global",
+    // Also includes: document, console, alert, etc.
+}
+
+Declarative Environment Record:
+{
+    globalLet: "Also Global"
+}
+*/
+
+console.log(window.globalVar);  // "Global"
+console.log(window.globalLet);  // undefined
+
+// Example 3: With Statement (creates Object Environment Record)
+const obj = { x: 10, y: 20 };
+
+with (obj) {
+    console.log(x);  // 10
+    console.log(y);  // 20
+    
+    /*
+    New Object Environment Record created:
+    - Bound to obj
+    - All property lookups go through obj
+    */
+}
+
+// Note: 'with' is deprecated and not allowed in strict mode!
+```
+
+#### **Environment Record Operations:**
+
+```javascript
+/*
+Environment Records support these operations:
+
+1. HasBinding(N) - Check if binding exists
+2. CreateMutableBinding(N, D) - Create new binding
+3. SetMutableBinding(N, V, S) - Set binding value
+4. GetBindingValue(N, S) - Get binding value
+5. DeleteBinding(N) - Delete binding
+6. HasThisBinding() - Check if 'this' exists
+7. GetThisBinding() - Get 'this' value
+*/
+
+// These happen internally during execution:
+
+function internalOperations() {
+    // 1. CreateMutableBinding("x", false)
+    let x;
+    
+    // 2. SetMutableBinding("x", 10, false)
+    x = 10;
+    
+    // 3. GetBindingValue("x", false)
+    console.log(x);  // 10
+    
+    // 4. HasBinding("x") - returns true
+    // 5. HasBinding("y") - returns false
+}
+```
+
+### **4.6 Outer Environment References**
+
+The **outer** reference links environments together, forming the scope chain.
+
+#### **Detailed Scope Chain Example:**
+
+```javascript
+const global = "Global Variable";
+
+function level1() {
+    const level1Var = "Level 1";
+    
+    function level2() {
+        const level2Var = "Level 2";
+        
+        function level3() {
+            const level3Var = "Level 3";
+            
+            // Can access all outer scopes!
+            console.log(level3Var);  // Own environment
+            console.log(level2Var);  // Parent environment
+            console.log(level1Var);  // Grandparent environment
+            console.log(global);     // Global environment
+        }
+        
+        level3();
+    }
+    
+    level2();
+}
+
+level1();
+
+/*
+ENVIRONMENT CHAIN:
+
+level3's Environment:
+{
+    EnvironmentRecord: { level3Var: "Level 3" },
+    outer: ───────────────────────────────────┐
+}                                             │
+                                              ↓
+level2's Environment:                         
+{
+    EnvironmentRecord: { level2Var: "Level 2" },
+    outer: ───────────────────────────────────┐
+}                                             │
+                                              ↓
+level1's Environment:
+{
+    EnvironmentRecord: { level1Var: "Level 1" },
+    outer: ───────────────────────────────────┐
+}                                             │
+                                              ↓
+Global Environment:
+{
+    EnvironmentRecord: { global: "Global Variable" },
+    outer: null  // End of chain
+}
+
+Variable Resolution:
+1. Look in level3's environment → Found level3Var
+2. Look in level2's environment → Found level2Var
+3. Look in level1's environment → Found level1Var
+4. Look in Global environment → Found global
+*/
+```
+
+#### **Lexical vs Dynamic Scoping:**
+
+```javascript
+// JavaScript uses LEXICAL (static) scoping
+
+var x = "Global X";
+
+function outer() {
+    var x = "Outer X";
+    
+    function inner() {
+        console.log(x);  // "Outer X" - determined by where defined
+    }
+    
+    return inner;
+}
+
+function caller() {
+    var x = "Caller X";
+    const fn = outer();
+    fn();  // Still "Outer X" - NOT "Caller X"!
+}
+
+caller();
+
+/*
+With LEXICAL scoping:
+- Scope is determined at WRITE time (where function is defined)
+- inner() is defined inside outer(), so it references outer's x
+
+With DYNAMIC scoping (not JavaScript):
+- Scope would be determined at RUN time (where function is called)
+- inner() called from caller(), would reference caller's x
+
+JavaScript's Outer Reference Chain:
+inner() → outer() → Global
+
+NOT:
+inner() → caller() → Global
+*/
+```
+
+#### **Closures and Outer References:**
+
+```javascript
+function createCounter() {
+    let count = 0;
+    
+    return {
+        increment: function() {
+            count++;
+            console.log(count);
+        },
+        decrement: function() {
+            count--;
+            console.log(count);
+        },
+        getCount: function() {
+            return count;
+        }
+    };
+}
+
+const counter = createCounter();
+counter.increment();  // 1
+counter.increment();  // 2
+counter.decrement();  // 1
+console.log(counter.getCount());  // 1
+
+/*
+CLOSURE ENVIRONMENT STRUCTURE:
+
+increment's Environment:
+{
+    EnvironmentRecord: {},
+    outer: ──────────────────────┐
+}                                │
+                                 ↓
+decrement's Environment:         │
+{                                │
+    EnvironmentRecord: {},       │
+    outer: ──────────────────────┤
+}                                │
+                                 │
+getCount's Environment:          │
+{                                │
+    EnvironmentRecord: {},       │
+    outer: ──────────────────────┤
+}                                │
+                                 ↓
+createCounter's Environment (preserved!):
+{
+    EnvironmentRecord: { count: 1 },
+    outer: <Global>
+}
+
+All three functions share the SAME outer environment!
+This is how they access and modify the same 'count'.
+*/
+```
+
+---
+
+## **5. CREATION PHASE (MEMORY CREATION PHASE)**
+
+### **5.1 Step-by-Step Process**
+
+The Creation Phase happens BEFORE any code executes. It sets up the execution context.
+
+#### **Creation Phase Steps:**
+
+```javascript
+function creationPhaseExample(param1, param2) {
+    console.log(a);  // What will this log?
+    console.log(b);  // What will this log?
+    console.log(c);  // What will this log?
+    
+    var a = 10;
+    let b = 20;
+    const c = 30;
+    
+    function declaredFunc() {
+        return "Declared";
+    }
+    
+    const expressionFunc = function() {
+        return "Expression";
+    };
+}
+
+creationPhaseExample("arg1", "arg2");
+
+/*
+CREATION PHASE STEPS:
+
+Step 1: Create Execution Context
+────────────────────────────────
+Empty context object created
+
+Step 2: Create Arguments Object
+────────────────────────────────
+arguments = {
+    0: "arg1",
+    1: "arg2",
+    length: 2
+}
+
+Step 3: Scan for Function Declarations
+───────────────────────────────────────
+declaredFunc: <function object stored in memory>
+
+Step 4: Scan for Variable Declarations (var)
+─────────────────────────────────────────────
+a: undefined (initialized)
+expressionFunc: undefined (variable part only)
+
+Step 5: Scan for let/const Declarations
+────────────────────────────────────────
+b: <uninitialized> (TDZ)
+c: <uninitialized> (TDZ)
+
+Step 6: Set Up This Binding
+────────────────────────────
+this: <determined by call type>
+
+Step 7: Set Up Outer Reference
+───────────────────────────────
+outer: <reference to parent lexical environment>
+
+MEMORY STATE AFTER CREATION PHASE:
+
+Variable Environment:
+{
+    a: undefined,
+    declaredFunc: <function object>,
+    expressionFunc: undefined,
+    param1: "arg1",
+    param2: "arg2",
+    arguments: {...}
+}
+
+Lexical Environment:
+{
+    b: <uninitialized>,
+    c: <uninitialized>
+}
+
+NOW EXECUTION PHASE BEGINS:
+
+console.log(a);  // undefined (from step 4)
+console.log(b);  // ReferenceError (TDZ from step 5)
+console.log(c);  // ReferenceError (TDZ from step 5)
+*/
+```
+
+#### **Detailed Creation Phase Visualization:**
+
+```javascript
+var globalVar = "global";
+
+function outer(x) {
+    var outerVar = "outer";
+    let outerLet = "outer let";
+    
+    function inner(y) {
+        var innerVar = "inner";
+        const innerConst = "inner const";
+        
+        console.log(x, y);
+        console.log(outerVar, outerLet);
+        console.log(innerVar, innerConst);
+    }
+    
+    inner(20);
+}
+
+outer(10);
+
+/*
+═══════════════════════════════════════════════════════════
+CREATION PHASE TIMELINE
+═══════════════════════════════════════════════════════════
+
+TIME 0: Script Loads
+───────────────────────────────────────────────────────────
+GLOBAL EXECUTION CONTEXT CREATION PHASE:
+
+1. Global object created (window/global)
+2. this = global object
+3. Scan declarations:
+   - globalVar: undefined
+   - outer: <function object>
+
+Memory State:
+{
+    VariableEnvironment: {
+        globalVar: undefined,
+        outer: <function object>
+    }
+}
+
+TIME 1: outer(10) Called
+───────────────────────────────────────────────────────────
+OUTER EXECUTION CONTEXT CREATION PHASE:
+
+1. New execution context created
+2. arguments object created: { 0: 10, length: 1 }
+3. Scan parameters: x = 10
+4. Scan function declarations: inner = <function object>
+5. Scan var declarations: outerVar = undefined
+6. Scan let declarations: outerLet = <uninitialized>
+7. Set outer reference: → Global Environment
+8. Set this: global object (or undefined in strict)
+
+Memory State:
+{
+    VariableEnvironment: {
+        x: 10,
+        outerVar: undefined,
+        inner: <function object>,
+        arguments: { 0: 10, length: 1 }
+    },
+    LexicalEnvironment: {
+        outerLet: <uninitialized>
+    },
+    outer: <Global Environment>
+}
+
+TIME 2: inner(20) Called
+───────────────────────────────────────────────────────────
+INNER EXECUTION CONTEXT CREATION PHASE:
+
+1. New execution context created
+2. arguments object created: { 0: 20, length: 1 }
+3. Scan parameters: y = 20
+4. Scan var declarations: innerVar = undefined
+5. Scan const declarations: innerConst = <uninitialized>
+6. Set outer reference: → Outer Environment
+7. Set this: global object (or undefined in strict)
+
+Memory State:
+{
+    VariableEnvironment: {
+        y: 20,
+        innerVar: undefined,
+        arguments: { 0: 20, length: 1 }
+    },
+    LexicalEnvironment: {
+        innerConst: <uninitialized>
+    },
+    outer: <Outer Environment>
+}
+
+═══════════════════════════════════════════════════════════
+CALL STACK AFTER ALL CREATION PHASES:
+═══════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────┐
+│  inner() Execution Context              │
+│  ─────────────────────────────────────  │
+│  VarEnv: { y: 20, innerVar: undefined } │
+│  LexEnv: { innerConst: <uninit> }       │
+│  outer: → Outer Environment             │
+├─────────────────────────────────────────┤
+│  outer() Execution Context              │
+│  ─────────────────────────────────────  │
+│  VarEnv: { x: 10, outerVar: undefined } │
+│  LexEnv: { outerLet: <uninit> }         │
+│  outer: → Global Environment            │
+├─────────────────────────────────────────┤
+│  Global Execution Context               │
+│  ─────────────────────────────────────  │
+│  VarEnv: { globalVar: undefined }       │
+│  outer: null                            │
+└─────────────────────────────────────────┘
+
+NOW EXECUTION PHASES BEGIN (bottom to top)
+*/
+```
+
+### **5.2 Variable Object Creation**
+
+During the creation phase, a **Variable Object** (or Environment Record) is created.
+
+#### **Variable Object Contents:**
+
+```javascript
+function variableObjectDemo(a, b) {
+    var x = 10;
+    var y = 20;
+    
+    function foo() {
+        return "foo";
+    }
+    
+    var bar = function() {
+        return "bar";
+    };
+    
+    let letVar = 30;
+    const constVar = 40;
+}
+
+variableObjectDemo(1, 2);
+
+/*
+VARIABLE OBJECT AFTER CREATION PHASE:
+
+VariableEnvironment (Variable Object):
+{
+    // 1. Function parameters
+    a: 1,
+    b: 2,
+    
+    // 2. Function declarations (complete)
+    foo: <function object>,
+    
+    // 3. Variable declarations (var - initialized to undefined)
+    x: undefined,
+    y: undefined,
+    bar: undefined,  // Only the variable, not the function!
+    
+    // 4. Arguments object
+    arguments: {
+        0: 1,
+        1: 2,
+        length: 2,
+        callee: <function reference>
+    }
+}
+
+LexicalEnvironment:
+{
+    // let and const (uninitialized - TDZ)
+    letVar: <uninitialized>,
+    constVar: <uninitialized>
+}
+
+AFTER EXECUTION PHASE:
+
+VariableEnvironment:
+{
+    a: 1,
+    b: 2,
+    foo: <function object>,
+    x: 10,          // Assigned
+    y: 20,          // Assigned
+    bar: <function object>,  // Assigned
+    arguments: {...}
+}
+
+LexicalEnvironment:
+{
+    letVar: 30,     // Initialized
+    constVar: 40    // Initialized
+}
+*/
+```
+
+#### **Variable Object with Complex Scenarios:**
+
+```javascript
+function complexScenario(param) {
+    // What's accessible and when?
+    
+    console.log("1:", param);           // ?
+    console.log("2:", declaredFunc);    // ?
+    console.log("3:", varVariable);     // ?
+    console.log("4:", letVariable);     // ?
+    console.log("5:", expressionFunc);  // ?
+    console.log("6:", arrowFunc);       // ?
+    
+    var varVariable = "var";
+    let letVariable = "let";
+    
+    function declaredFunc() {
+        return "declared";
+    }
+    
+    var expressionFunc = function() {
+        return "expression";
+    };
+    
+    var arrowFunc = () => {
+        return "arrow";
+    };
+}
+
+try {
+    complexScenario("parameter");
+} catch(e) {
+    console.log("Error:", e.message);
+}
+
+/*
+OUTPUT AND EXPLANATION:
+
+1: parameter
+   ✓ Parameters are set during creation phase
+
+2: [Function: declaredFunc]
+   ✓ Function declarations are fully hoisted
+
+3: undefined
+   ✓ var is hoisted and initialized to undefined
+
+4: ReferenceError: Cannot access 'letVariable' before initialization
+   ✗ let is in TDZ during creation phase
+   
+(Execution stops here due to error)
+
+If we commented out line 4:
+
+5: undefined
+   ✓ var expressionFunc is hoisted (variable part)
+   ✗ But function expression is not hoisted
+
+6: undefined
+   ✓ var arrowFunc is hoisted (variable part)
+   ✗ But arrow function is not hoisted
+
+═══════════════════════════════════════════════════════════
+
+CREATION PHASE MEMORY:
+{
+    VariableEnvironment: {
+        param: "parameter",
+        declaredFunc: <function object>,
+        varVariable: undefined,
+        expressionFunc: undefined,
+        arrowFunc: undefined
+    },
+    LexicalEnvironment: {
+        letVariable: <uninitialized>
+    }
+}
+*/
+```
+
+### **5.3 Scope Chain Formation**
+
+The **Scope Chain** is formed during the creation phase by linking outer environment references.
+
+#### **Scope Chain Formation Process:**
+
+```javascript
+var globalVar = "global";
+
+function level1(a) {
+    var level1Var = "level1";
+    
+    function level2(b) {
+        var level2Var = "level2";
+        
+        function level3(c) {
+            var level3Var = "level3";
+            
+            // Scope chain allows access to all outer variables
+            console.log(level3Var);  // Own scope
+            console.log(level2Var);  // Parent scope
+            console.log(level1Var);  // Grandparent scope
+            console.log(globalVar);  // Global scope
+            console.log(a, b, c);    // Parameters from all scopes
+        }
+        
+        level3("c");
+    }
+    
+    level2("b");
+}
+
+level1("a");
+
+/*
+═══════════════════════════════════════════════════════════
+SCOPE CHAIN FORMATION
+═══════════════════════════════════════════════════════════
+
+STEP 1: Global Execution Context Created
+─────────────────────────────────────────
+Scope Chain: null
+├─ globalVar: undefined
+├─ level1: <function>
+└─ outer: null
+
+STEP 2: level1() Execution Context Created
+───────────────────────────────────────────
+Scope Chain: → Global
+├─ a: "a"
+├─ level1Var: undefined
+├─ level2: <function>
+└─ outer: → Global Scope
+
+STEP 3: level2() Execution Context Created
+───────────────────────────────────────────
+Scope Chain: → level1 → Global
+├─ b: "b"
+├─ level2Var: undefined
+├─ level3: <function>
+└─ outer: → level1 Scope
+
+STEP 4: level3() Execution Context Created
+───────────────────────────────────────────
+Scope Chain: → level2 → level1 → Global
+├─ c: "c"
+├─ level3Var: undefined
+└─ outer: → level2 Scope
+
+═══════════════════════════════════════════════════════════
+COMPLETE SCOPE CHAIN VISUALIZATION
+═══════════════════════════════════════════════════════════
+
+level3 Execution Context
+┌─────────────────────────────┐
+│ c: "c"                      │
+│ level3Var: undefined        │
+│ outer: ───┐                 │
+└───────────┼─────────────────┘
+            │
+            ↓
+level2 Execution Context
+┌─────────────────────────────┐
+│ b: "b"                      │
+│ level2Var: undefined        │
+│ level3: <function>          │
+│ outer: ───┐                 │
+└───────────┼─────────────────┘
+            │
+            ↓
+level1 Execution Context
+┌─────────────────────────────┐
+│ a: "a"                      │
+│ level1Var: undefined        │
+│ level2: <function>          │
+│ outer: ───┐                 │
+└───────────┼─────────────────┘
+            │
+            ↓
+Global Execution Context
+┌─────────────────────────────┐
+│ globalVar: "global"         │
+│ level1: <function>          │
+│ outer: null                 │
+└─────────────────────────────┘
+
+═══════════════════════════════════════════════════════════
+IDENTIFIER RESOLUTION (during execution)
+═══════════════════════════════════════════════════════════
+
+When level3 tries to access 'level1Var':
+
+1. Search in level3 scope: NOT FOUND
+2. Follow outer → Search in level2 scope: NOT FOUND
+3. Follow outer → Search in level1 scope: FOUND! ✓
+4. Return value: "level1"
+
+When level3 tries to access 'a':
+
+1. Search in level3 scope: NOT FOUND
+2. Follow outer → Search in level2 scope: NOT FOUND
+3. Follow outer → Search in level1 scope: FOUND! ✓
+4. Return value: "a"
+
+This chain is FIXED at function DEFINITION time (lexical scoping)!
+*/
+```
+
+#### **Scope Chain with Closures:**
+
+```javascript
+function outer() {
+    var outerVar = "outer";
+    
+    function middle() {
+        var middleVar = "middle";
+        
+        function inner() {
+            var innerVar = "inner";
+            
+            console.log(innerVar);   // inner scope
+            console.log(middleVar);  // middle scope (via scope chain)
+            console.log(outerVar);   // outer scope (via scope chain)
+        }
+        
+        return inner;
+    }
+    
+    return middle;
+}
+
+const middleFunc = outer();
+const innerFunc = middleFunc();
+innerFunc();
+
+/*
+EVEN AFTER outer() AND middle() HAVE RETURNED:
+
+innerFunc still has access to their variables!
+
+innerFunc's Scope Chain (preserved via closure):
+┌──────────────────┐
+│ inner scope      │
+│ innerVar: "in"   │
+│ outer: ───┐      │
+└───────────┼──────┘
+            │
+            ↓
+┌──────────────────┐
+│ middle scope     │ ← STILL IN MEMORY (Closure!)
+│ middleVar: "mid" │
+│ outer: ───┐      │
+└───────────┼──────┘
+            │
+            ↓
+┌──────────────────┐
+│ outer scope      │ ← STILL IN MEMORY (Closure!)
+│ outerVar: "out"  │
+│ outer: ───┐      │
+└───────────┼──────┘
+            │
+            ↓
+┌──────────────────┐
+│ Global scope     │
+│ outer: <func>    │
+│ middleFunc: ...  │
+│ innerFunc: ...   │
+└──────────────────┘
+
+The scope chain is preserved in memory as long as
+innerFunc exists, allowing it to access outer variables.
+*/
+```
+
+### **5.4 This Determination**
+
+The value of `this` is determined during the **creation phase** based on how the function is called.
+
+#### **This Determination Rules:**
+
+```javascript
+// Rule 1: Global Context
+console.log(this);  // Window (browser) or Global (Node.js)
+
+/*
+Global Execution Context:
+{
+    ThisBinding: <global object>
+}
+*/
+
+// Rule 2: Function Call (non-strict)
+function regularFunction() {
+    console.log(this);  // Global object
+}
+regularFunction();
+
+/*
+regularFunction Execution Context:
+{
+    ThisBinding: <global object>  // Default binding
+}
+*/
+
+// Rule 3: Function Call (strict mode)
+function strictFunction() {
+    'use strict';
+    console.log(this);  // undefined
+}
+strictFunction();
+
+/*
+strictFunction Execution Context:
+{
+    ThisBinding: undefined  // Strict mode default
+}
+*/
+
+// Rule 4: Method Call
+const obj = {
+    name: "Object",
+    method: function() {
+        console.log(this);  // obj
+        console.log(this.name);  // "Object"
+    }
+};
+obj.method();
+
+/*
+method Execution Context:
+{
+    ThisBinding: obj  // Implicit binding
+}
+*/
+
+// Rule 5: Constructor Call
+function Person(name) {
+    this.name = name;
+    console.log(this);  // New object being created
+}
+const person = new Person("John");
+
+/*
+Person Execution Context (with 'new'):
+{
+    ThisBinding: <newly created object>  // New binding
+}
+
+Process:
+1. New empty object created: {}
+2. This bound to new object
+3. Object's [[Prototype]] set to Person.prototype
+4. Constructor executes with this = new object
+5. If no explicit return, return this
+*/
+
+// Rule 6: Explicit Binding
+function explicitBinding(greeting) {
+    console.log(`${greeting}, ${this.name}`);
+}
+
+const context = { name: "Context" };
+
+explicitBinding.call(context, "Hello");
+// "Hello, Context"
+
+explicitBinding.apply(context, ["Hi"]);
+// "Hi, Context"
+
+const boundFunc = explicitBinding.bind(context);
+boundFunc("Hey");
+// "Hey, Context"
+
+/*
+Execution Context with call/apply:
+{
+    ThisBinding: context  // Explicitly set
+}
+
+Execution Context with bind:
+- Creates new function with 'this' permanently bound
+{
+    ThisBinding: context  // Cannot be changed!
+}
+*/
+
+// Rule 7: Arrow Functions
+const objWithArrow = {
+    name: "Object",
+    regularMethod: function() {
+        console.log("Regular:", this.name);  // "Object"
+        
+        const arrowFunc = () => {
+            console.log("Arrow:", this.name);  // "Object" (inherited)
+        };
+        
+        arrowFunc();
+        
+        setTimeout(function() {
+            console.log("Callback:", this.name);  // undefined
+        }, 100);
+        
+        setTimeout(() => {
+            console.log("Arrow Callback:", this.name);  // "Object"
+        }, 200);
+    }
+};
+
+objWithArrow.regularMethod();
+
+/*
+regularMethod Execution Context:
+{
+    ThisBinding: objWithArrow  // Implicit binding
+}
+
+arrowFunc Execution Context:
+{
+    ThisBinding: <INHERITED from regularMethod>  // Lexical this
+}
+
+setTimeout callback Execution Context:
+{
+    ThisBinding: <global>  // New context, default binding
+}
+
+setTimeout arrow callback Execution Context:
+{
+    ThisBinding: <INHERITED from regularMethod>  // Lexical this
+}
+*/
+```
+
+#### **This Determination Priority:**
+
+```javascript
+function demonstratePriority(name) {
+    this.name = name;
+}
+
+const obj = { name: "Object" };
+
+// Test 1: Regular call vs new
+console.log("Test 1:");
+demonstratePriority("Regular");  // this = global
+const instance = new demonstratePriority("New");  // this = new object
+console.log(window.name);      // "Regular" (if browser, non-strict)
+console.log(instance.name);    // "New"
+
+// Test 2: new vs bind
+console.log("\nTest 2:");
+const boundFunc = demonstratePriority.bind(obj);
+boundFunc("Bound");            // this = obj
+console.log(obj.name);         // "Bound"
+
+const instanceFromBound = new boundFunc("New from Bound");
+console.log(instanceFromBound.name);  // "New from Bound"
+console.log(obj.name);                // Still "Bound"
+// new overrides bind!
+
+// Test 3: call/apply vs bind
+console.log("\nTest 3:");
+const boundToObj = demonstratePriority.bind({ name: "Bound Context" });
+boundToObj.call({ name: "Call Context" }, "Called");
+// this is still "Bound Context", call doesn't override bind!
+
+/*
+THIS BINDING PRIORITY (Highest to Lowest):
+
+1. new binding
+   new Func() → new object
+
+2. Explicit binding
+   func.call(obj) → obj
+   func.apply(obj) → obj
+   
+3. Hard binding (bind)
+   func.bind(obj) → obj (cannot be overridden except by new)
+
+4. Implicit binding
+   obj.method() → obj
+
+5. Default binding
+   func() → global (non-strict) or undefined (strict)
+
+6. Arrow functions
+   Use lexical this (from enclosing scope)
+   CANNOT be changed by any of the above!
+*/
+```
+
+### **5.5 Memory Allocation Patterns**
+
+Understanding how memory is allocated during creation phase helps optimize code.
+
+#### **Memory Allocation for Different Declaration Types:**
+
+```javascript
+function memoryAllocationDemo() {
+    // Different declarations, different memory patterns
+    
+    var varPrimitive = 10;           // Stack
+    var varObject = { x: 10 };       // Reference on stack, object on heap
+    
+    let letPrimitive = 20;           // Stack
+    let letObject = { y: 20 };       // Reference on stack, object on heap
+    
+    const constPrimitive = 30;       // Stack
+    const constObject = { z: 30 };   // Reference on stack, object on heap
+    
+    function declaredFunction() {}   // Function object on heap
+    const arrowFunction = () => {};  // Function object on heap
+}
+
+/*
+═══════════════════════════════════════════════════════════
+MEMORY LAYOUT AFTER CREATION PHASE
+═══════════════════════════════════════════════════════════
+
+STACK (Execution Context):
+┌─────────────────────────────────────────┐
+│ Variable Environment                    │
+├─────────────────────────────────────────┤
+│ varPrimitive: undefined                 │
+│ varObject: undefined                    │
+│ declaredFunction: <ref to heap address> │→ Heap
+├─────────────────────────────────────────┤
+│ Lexical Environment                     │
+├─────────────────────────────────────────┤
+│ letPrimitive: <uninitialized>           │
+│ letObject: <uninitialized>              │
+│ constPrimitive: <uninitialized>         │
+│ constObject: <uninitialized>            │
+│ arrowFunction: <uninitialized>          │
+└─────────────────────────────────────────┘
+
+HEAP (Objects and Functions):
+┌─────────────────────────────────────────┐
+│ Function Object: declaredFunction       │
+│ - [[Code]]: function body               │
+│ - [[Scope]]: lexical environment ref    │
+│ - prototype: {...}                      │
+└─────────────────────────────────────────┘
+
+(Other objects allocated during execution phase)
+
+═══════════════════════════════════════════════════════════
+MEMORY LAYOUT AFTER EXECUTION PHASE
+═══════════════════════════════════════════════════════════
+
+STACK:
+┌─────────────────────────────────────────┐
+│ Variable Environment                    │
+├─────────────────────────────────────────┤
+│ varPrimitive: 10                        │
+│ varObject: <ref to 0x1000>              │→ Heap 0x1000
+│ declaredFunction: <ref to 0x2000>       │→ Heap 0x2000
+├─────────────────────────────────────────┤
+│ Lexical Environment                     │
+├─────────────────────────────────────────┤
+│ letPrimitive: 20                        │
+│ letObject: <ref to 0x1100>              │→ Heap 0x1100
+│ constPrimitive: 30                      │
+│ constObject: <ref to 0x1200>            │→ Heap 0x1200
+│ arrowFunction: <ref to 0x2100>          │→ Heap 0x2100
+└─────────────────────────────────────────┘
+
+HEAP:
+┌──────────────────────────────────┐
+│ 0x1000: { x: 10 }                │ ← varObject
+├──────────────────────────────────┤
+│ 0x1100: { y: 20 }                │ ← letObject
+├──────────────────────────────────┤
+│ 0x1200: { z: 30 }                │ ← constObject
+├──────────────────────────────────┤
+│ 0x2000: Function Object          │ ← declaredFunction
+│         (created in creation)    │
+├──────────────────────────────────┤
+│ 0x2100: Function Object          │ ← arrowFunction
+│         (created in execution)   │
+└──────────────────────────────────┘
+*/
+```
+
+#### **Memory Allocation for Closures:**
+
+```javascript
+function createCounter() {
+    let count = 0;  // This will be kept in memory!
+    
+    return function() {
+        count++;
+        return count;
+    };
+}
+
+const counter1 = createCounter();
+const counter2 = createCounter();
+
+console.log(counter1());  // 1
+console.log(counter1());  // 2
+console.log(counter2());  // 1 (separate closure)
+console.log(counter2());  // 2
+
+/*
+═══════════════════════════════════════════════════════════
+CLOSURE MEMORY PATTERN
+═══════════════════════════════════════════════════════════
+
+After createCounter() is called twice:
+
+HEAP:
+┌──────────────────────────────────────────┐
+│ Closure 1 (for counter1)                 │
+│ ────────────────────────────────────     │
+│ Lexical Environment:                     │
+│   count: 2 (after two calls)             │
+│                                          │
+│ Function Object:                         │
+│   [[Code]]: function body                │
+│   [[Scope]]: → Closure 1 Lex Env         │
+└──────────────────────────────────────────┘
+
+┌──────────────────────────────────────────┐
+│ Closure 2 (for counter2)                 │
+│ ────────────────────────────────────     │
+│ Lexical Environment:                     │
+│   count: 2 (after two calls)             │
+│                                          │
+│ Function Object:                         │
+│   [[Code]]: same function body           │
+│   [[Scope]]: → Closure 2 Lex Env         │
+└──────────────────────────────────────────┘
+
+GLOBAL:
+┌──────────────────────────────────────────┐
+│ counter1: <ref to Closure 1 Function>   │
+│ counter2: <ref to Closure 2 Function>   │
+└──────────────────────────────────────────┘
+
+Each closure maintains its own copy of the lexical environment!
+*/
+```
+
+### **5.6 Differences Between var, let, and const**
+
+#### **Complete Comparison During Creation Phase:**
+
+```javascript
+function compareDeclarations() {
+    // Access before declaration
+    console.log("var:", varVariable);        // undefined
+    // console.log("let:", letVariable);     // ReferenceError
+    // console.log("const:", constVariable); // ReferenceError
+    
+    // Declaration
+    var varVariable = "var";
+    let letVariable = "let";
+    const constVariable = "const";
+    
+    // Reassignment
+    varVariable = "new var";      // ✓ Allowed
+    letVariable = "new let";      // ✓ Allowed
+    // constVariable = "new const"; // ✗ TypeError
+    
+    // Redeclaration
+    var varVariable = "redeclared var";      // ✓ Allowed
+    // let letVariable = "redeclared let";   // ✗ SyntaxError
+    // const constVariable = "redec const";  // ✗ SyntaxError
+    
+    // Scope
+    if (true) {
+        var varInBlock = "var in block";
+        let letInBlock = "let in block";
+        const constInBlock = "const in block";
+    }
+    
+    console.log(varInBlock);    // ✓ "var in block" (function scoped)
+    // console.log(letInBlock);   // ✗ ReferenceError (block scoped)
+    // console.log(constInBlock); // ✗ ReferenceError (block scoped)
+}
+
+/*
+═══════════════════════════════════════════════════════════
+DETAILED COMPARISON TABLE
+═══════════════════════════════════════════════════════════
+
+╔═══════════════╦═══════════╦═══════════╦═══════════════╗
+║   Feature     ║    var    ║    let    ║     const     ║
+╠═══════════════╬═══════════╬═══════════╬═══════════════╣
+║ Scope         ║ Function  ║   Block   ║    Block      ║
+║ Hoisting      ║    Yes    ║    Yes    ║     Yes       ║
+║ Initialized   ║ undefined ║    No     ║      No       ║
+║ TDZ           ║    No     ║    Yes    ║     Yes       ║
+║ Reassign      ║    Yes    ║    Yes    ║      No       ║
+║ Redeclare     ║    Yes    ║    No     ║      No       ║
+║ Global Object ║    Yes    ║    No     ║      No       ║
+║ Environment   ║  Variable ║  Lexical  ║   Lexical     ║
+╚═══════════════╩═══════════╩═══════════╩═══════════════╝
+
+═══════════════════════════════════════════════════════════
+CREATION PHASE BEHAVIOR
+═══════════════════════════════════════════════════════════
+
+var varVariable = "value";
+───────────────────────────
+Creation Phase:
+  VariableEnvironment: { varVariable: undefined }
+Execution Phase:
+  VariableEnvironment: { varVariable: "value" }
+
+let letVariable = "value";
+───────────────────────────
+Creation Phase:
+  LexicalEnvironment: { letVariable: <uninitialized> }
+  ← TDZ starts
+Execution Phase (at declaration):
+  LexicalEnvironment: { letVariable: "value" }
+  ← TDZ ends
+
+const constVariable = "value";
+───────────────────────────────
+Creation Phase:
+  LexicalEnvironment: { constVariable: <uninitialized> }
+  ← TDZ starts
+Execution Phase (at declaration):
+  LexicalEnvironment: { constVariable: "value" }
+  ← TDZ ends
+  ← Cannot be reassigned
+
+═══════════════════════════════════════════════════════════
+SCOPE DIFFERENCES
+═══════════════════════════════════════════════════════════
+
+function scopeDemo() {
+    // Function scope
+    var functionScoped = "var";
+    
+    if (true) {
+        // Block scope
+        let blockScoped = "let";
+        const alsoBlockScoped = "const";
+        var notBlockScoped = "var";
+        
+        console.log(functionScoped);  // ✓ Accessible
+        console.log(blockScoped);     // ✓ Accessible
+        console.log(alsoBlockScoped); // ✓ Accessible
+    }
+    
+    console.log(functionScoped);   // ✓ Accessible
+    console.log(notBlockScoped);   // ✓ Accessible (leaked!)
+    // console.log(blockScoped);     // ✗ Not accessible
+    // console.log(alsoBlockScoped); // ✗ Not accessible
+}
+
+Environment Structure:
+
+Function Level:
+{
+    VariableEnvironment: {
+        functionScoped: "var",
+        notBlockScoped: "var"  ← Hoisted to function level!
+    }
+}
+    │
+    └─→ Block Level:
+        {
+            LexicalEnvironment: {
+                blockScoped: "let",
+                alsoBlockScoped: "const"
+            }
+        }
+        
+═══════════════════════════════════════════════════════════
+HOISTING DIFFERENCES
+═══════════════════════════════════════════════════════════
+
+// var hoisting
+console.log(hoistedVar);  // undefined
+var hoistedVar = "value";
+
+Interpreted as:
+────────────────
+var hoistedVar;           // Declaration hoisted
+console.log(hoistedVar);  // undefined
+hoistedVar = "value";     // Assignment stays
+
+// let hoisting
+console.log(hoistedLet);  // ReferenceError
+let hoistedLet = "value";
+
+What happens:
+─────────────
+// let hoistedLet;        ← Hoisted but uninitialized (TDZ)
+console.log(hoistedLet);  // ReferenceError (in TDZ)
+let hoistedLet = "value"; // TDZ ends here
+
+// const hoisting
+console.log(hoistedConst);  // ReferenceError
+const hoistedConst = "value";
+
+What happens:
+─────────────
+// const hoistedConst;        ← Hoisted but uninitialized (TDZ)
+console.log(hoistedConst);  // ReferenceError (in TDZ)
+const hoistedConst = "value"; // TDZ ends, must have initializer
+*/
+```
+
+---
+
+## **6. EXECUTION PHASE (CODE EXECUTION PHASE)**
+
+### **6.1 Line-by-Line Execution**
+
+After the creation phase, code executes line by line during the **execution phase**.
+
+#### **Detailed Execution Flow:**
+
+```javascript
+function executionPhaseDemo(param) {
+    console.log("Step 1: Start execution");
+    console.log("param:", param);
+    
+    var varVariable = "var value";
+    console.log("Step 2: varVariable assigned");
+    
+    let letVariable = "let value";
+    console.log("Step 3: letVariable assigned");
+    
+    function innerFunction() {
+        console.log("Step 5: Inner function executing");
+    }
+    
+    console.log("Step 4: About to call inner");
+    innerFunction();
+    
+    console.log("Step 6: Execution complete");
+    return "done";
+}
+
+const result = executionPhaseDemo("test");
+console.log("Result:", result);
+
+/*
+═══════════════════════════════════════════════════════════
+COMPLETE EXECUTION TIMELINE
+═══════════════════════════════════════════════════════════
+
+CREATION PHASE:
+──────────────
+Time: Before any code runs
+Context State:
+{
+    VariableEnvironment: {
+        param: "test",
+        varVariable: undefined,
+        innerFunction: <function object>,
+        arguments: { 0: "test", length: 1 }
+    },
+    LexicalEnvironment: {
+        letVariable: <uninitialized>
+    },
+    ThisBinding: <global>
+}
+
+EXECUTION PHASE:
+────────────────
+
+Line 2: console.log("Step 1: Start execution");
+─────────────────────────────────────────────────
+Output: "Step 1: Start execution"
+Context State: (unchanged)
+
+Line 3: console.log("param:", param);
+──────────────────────────────────────
+Output: "param: test"
+Context State: (unchanged - param already set)
+
+Line 5: var varVariable = "var value";
+────────────────────────────────────────
+Memory Update:
+  VariableEnvironment.varVariable: undefined → "var value"
+Output: (none)
+
+Line 6: console.log("Step 2: varVariable assigned");
+──────────────────────────────────────────────────────
+Output: "Step 2: varVariable assigned"
+
+Line 8: let letVariable = "let value";
+────────────────────────────────────────
+Memory Update:
+  LexicalEnvironment.letVariable: <uninitialized> → "let value"
+  TDZ ends for letVariable
+Output: (none)
+
+Line 9: console.log("Step 3: letVariable assigned");
+──────────────────────────────────────────────────────
+Output: "Step 3: letVariable assigned"
+
+Line 11-13: function innerFunction() { ... }
+──────────────────────────────────────────────
+Note: Already in memory from creation phase
+Output: (none)
+
+Line 15: console.log("Step 4: About to call inner");
+──────────────────────────────────────────────────────
+Output: "Step 4: About to call inner"
+
+Line 16: innerFunction();
+──────────────────────────
+Call Stack Update:
+  [innerFunction EC]
+  [executionPhaseDemo EC]
+  [Global EC]
+
+NEW CONTEXT CREATED FOR innerFunction:
+  Creation Phase → Execution Phase
+  
+Line 12 (inside innerFunction): console.log("Step 5...");
+───────────────────────────────────────────────────────────
+Output: "Step 5: Inner function executing"
+
+innerFunction returns (implicit):
+──────────────────────────────────
+Call Stack Update:
+  [executionPhaseDemo EC]
+  [Global EC]
+
+Line 18: console.log("Step 6: Execution complete");
+─────────────────────────────────────────────────────
+Output: "Step 6: Execution complete"
+
+Line 19: return "done";
+─────────────────────────
+Return value: "done"
+Context destroyed
+
+Call Stack Update:
+  [Global EC]
+
+Line 22: const result = executionPhaseDemo("test");
+─────────────────────────────────────────────────────
+Memory Update:
+  Global.LexicalEnvironment.result: <uninitialized> → "done"
+
+Line 23: console.log("Result:", result);
+─────────────────────────────────────────
+Output: "Result: done"
+
+═══════════════════════════════════════════════════════════
+COMPLETE OUTPUT:
+═══════════════════════════════════════════════════════════
+Step 1: Start execution
+param: test
+Step 2: varVariable assigned
+Step 3: letVariable assigned
+Step 4: About to call inner
+Step 5: Inner function executing
+Step 6: Execution complete
+Result: done
+*/
+```
+
+### **6.2 Variable Assignment**
+
+Variable assignment happens during execution phase, updating the values set in creation phase.
+
+#### **Assignment Process:**
+
+```javascript
+function assignmentDemo() {
+    // Creation phase: all declared but not assigned
+    var a, b, c;
+    let x, y, z;
+    
+    console.log("Before assignments:");
+    console.log("a:", a, "b:", b, "c:", c);  // undefined, undefined, undefined
+    console.log("x:", x, "y:", y, "z:", z);  // undefined, undefined, undefined
+    
+    // Execution phase: assignments happen
+    a = 10;
+    b = 20;
+    c = 30;
+    
+    x = 40;
+    y = 50;
+    z = 60;
+    
+    console.log("After assignments:");
+    console.log("a:", a, "b:", b, "c:", c);  // 10, 20, 30
+    console.log("x:", x, "y:", y, "z:", z);  // 40, 50, 60
+}
+
+assignmentDemo();
+
+/*
+═══════════════════════════════════════════════════════════
+ASSIGNMENT TIMELINE
+═══════════════════════════════════════════════════════════
+
+CREATION PHASE:
+───────────────
+VariableEnvironment: {
+    a: undefined,
+    b: undefined,
+    c: undefined
+}
+
+LexicalEnvironment: {
+    x: undefined,
+    y: undefined,
+    z: undefined
+}
+
+EXECUTION PHASE - Assignment Operations:
+────────────────────────────────────────
+
+Operation: a = 10
+───────────────────
+Before: { a: undefined }
+After:  { a: 10 }
+Steps:
+  1. Evaluate right-hand side: 10
+  2. Find 'a' in current environment
+  3. Update binding: a = 10
+
+Operation: b = 20
+───────────────────
+Before: { a: 10, b: undefined }
+After:  { a: 10, b: 20 }
+
+Operation: c = 30
+───────────────────
+Before: { a: 10, b: 20, c: undefined }
+After:  { a: 10, b: 20, c: 30 }
+
+Operation: x = 40
+───────────────────
+Before: { x: undefined }
+After:  { x: 40 }
+
+Operation: y = 50
+───────────────────
+Before: { x: 40, y: undefined }
+After:  { x: 40, y: 50 }
+
+Operation: z = 60
+───────────────────
+Before: { x: 40, y: 50, z: undefined }
+After:  { x: 40, y: 50, z: 60 }
+*/
+```
+
+#### **Complex Assignment Operations:**
+
+```javascript
+function complexAssignments() {
+    // Multiple assignments
+    var a, b, c;
+    a = b = c = 10;  // Right-to-left evaluation
+    console.log(a, b, c);  // 10, 10, 10
+    
+    // Destructuring assignment
+    let [x, y, z] = [1, 2, 3];
+    console.log(x, y, z);  // 1, 2, 3
+    
+    // Object destructuring
+    let {name, age} = {name: "John", age: 30};
+    console.log(name, age);  // "John", 30
+    
+    // Compound assignment
+    let num = 10;
+    num += 5;   // num = num + 5
+    num *= 2;   // num = num * 2
+    console.log(num);  // 30
+    
+    // Logical assignment (ES2021)
+    let value = null;
+    value ??= 10;  // Assign if null or undefined
+    console.log(value);  // 10
+}
+
+complexAssignments();
+
+/*
+═══════════════════════════════════════════════════════════
+ASSIGNMENT EVALUATION ORDER
+═══════════════════════════════════════════════════════════
+
+Statement: a = b = c = 10;
+───────────────────────────
+
+Step-by-step evaluation (right-to-left):
+
+Step 1: c = 10
+  Environment: { a: undefined, b: undefined, c: 10 }
+  Returns: 10
+
+Step 2: b = 10 (result of Step 1)
+  Environment: { a: undefined, b: 10, c: 10 }
+  Returns: 10
+
+Step 3: a = 10 (result of Step 2)
+  Environment: { a: 10, b: 10, c: 10 }
+  Returns: 10
+
+Statement: let [x, y, z] = [1, 2, 3];
+───────────────────────────────────────
+
+Step 1: Evaluate right side
+  Create array: [1, 2, 3]
+
+Step 2: Pattern matching
+  x = array[0]  → 1
+  y = array[1]  → 2
+  z = array[2]  → 3
+
+Step 3: Assignments
+  LexicalEnvironment: { x: 1, y: 2, z: 3 }
+
+Statement: let {name, age} = {name: "John", age: 30};
+───────────────────────────────────────────────────────
+
+Step 1: Evaluate right side
+  Create object: { name: "John", age: 30 }
+
+Step 2: Property extraction
+  name = object.name  → "John"
+  age = object.age    → 30
+
+Step 3: Assignments
+  LexicalEnvironment: { name: "John", age: 30 }
+*/
+```
+
+### **6.3 Function Invocation**
+
+Function calls create new execution contexts during the execution phase.
+
+#### **Function Call Process:**
+
+```javascript
+function outer(x) {
+    console.log("Outer start, x:", x);
+    
+    function inner(y) {
+        console.log("Inner start, y:", y);
+        console.log("Inner can access x:", x);
+        return x + y;
+    }
+    
+    const result = inner(20);
+    console.log("Outer received result:", result);
+    return result;
+}
+
+const finalResult = outer(10);
+console.log("Final result:", finalResult);
+
+/*
+═══════════════════════════════════════════════════════════
+FUNCTION INVOCATION TIMELINE
+═══════════════════════════════════════════════════════════
+
+TIME 0: Global Code Execution
+──────────────────────────────
+Call Stack: [Global EC]
+Code: const finalResult = outer(10);
+Action: Prepare to call outer()
+
+TIME 1: outer(10) Called
+────────────────────────
+Call Stack: [outer EC, Global EC]
+
+outer EC Creation Phase:
+  VariableEnvironment: {
+    x: 10,
+    inner: <function object>,
+    result: undefined,
+    arguments: { 0: 10, length: 1 }
+  }
+  ThisBinding: <global>
+  outer: <Global Environment>
+
+outer EC Execution Phase:
+  Line: console.log("Outer start, x:", x);
+  Output: "Outer start, x: 10"
+  
+  Line: const result = inner(20);
+  Action: Prepare to call inner()
+
+TIME 2: inner(20) Called
+─────────────────────────
+Call Stack: [inner EC, outer EC, Global EC]
+
+inner EC Creation Phase:
+  VariableEnvironment: {
+    y: 20,
+    arguments: { 0: 20, length: 1 }
+  }
+  ThisBinding: <global>
+  outer: <outer's Environment>  ← Scope chain!
+
+inner EC Execution Phase:
+  Line: console.log("Inner start, y:", y);
+  Output: "Inner start, y: 20"
+  
+  Line: console.log("Inner can access x:", x);
+  Resolution: x not in inner → check outer → Found!
+  Output: "Inner can access x: 10"
+  
+  Line: return x + y;
+  Evaluation: 10 + 20 = 30
+  Return: 30
+  
+  Context destroyed
+
+TIME 3: Return to outer EC
+───────────────────────────
+Call Stack: [outer EC, Global EC]
+
+Continuing outer EC Execution:
+  Line: const result = inner(20);
+  Memory Update: result = 30
+  
+  Line: console.log("Outer received result:", result);
+  Output: "Outer received result: 30"
+  
+  Line: return result;
+  Return: 30
+  
+  Context destroyed
+
+TIME 4: Return to Global EC
+─────────────────────────────
+Call Stack: [Global EC]
+
+Continuing Global Execution:
+  Line: const finalResult = outer(10);
+  Memory Update: finalResult = 30
+  
+  Line: console.log("Final result:", finalResult);
+  Output: "Final result: 30"
+
+═══════════════════════════════════════════════════════════
+COMPLETE OUTPUT:
+═══════════════════════════════════════════════════════════
+Outer start, x: 10
+Inner start, y: 20
+Inner can access x: 10
+Outer received result: 30
+Final result: 30
+*/
+```
+
+#### **Different Function Call Types:**
+
+```javascript
+// 1. Regular function call
+function regularCall(x) {
+    console.log("Regular:", x, this);
+    return x * 2;
+}
+const result1 = regularCall(5);
+
+// 2. Method call
+const obj = {
+    value: 10,
+    method: function(x) {
+        console.log("Method:", x, this.value);
+        return x + this.value;
+    }
+};
+const result2 = obj.method(5);
+
+// 3. Constructor call
+function Constructor(value) {
+    console.log("Constructor:", this);
+    this.value = value;
+}
+const instance = new Constructor(5);
+
+// 4. Indirect call (call/apply)
+function indirectCall(x, y) {
+    console.log("Indirect:", x, y, this.value);
+    return x + y + this.value;
+}
+const context = { value: 10 };
+const result3 = indirectCall.call(context, 5, 3);
+const result4 = indirectCall.apply(context, [5, 3]);
+
+// 5. Bound function
+const boundFunc = indirectCall.bind(context, 5);
+const result5 = boundFunc(3);
+
+/*
+═══════════════════════════════════════════════════════════
+EXECUTION CONTEXT FOR EACH CALL TYPE
+═══════════════════════════════════════════════════════════
+
+1. regularCall(5)
+─────────────────
+Execution Context: {
+    VariableEnvironment: { x: 5 },
+    ThisBinding: <global> (or undefined in strict mode),
+    outer: <Global Environment>
+}
+Output: "Regular: 5 <global>"
+Return: 10
+
+2. obj.method(5)
+────────────────
+Execution Context: {
+    VariableEnvironment: { x: 5 },
+    ThisBinding: obj,  ← Implicit binding
+    outer: <Global Environment>
+}
+Output: "Method: 5 10"
+Return: 15
+
+3. new Constructor(5)
+─────────────────────
+Execution Context: {
+    VariableEnvironment: { value: 5 },
+    ThisBinding: <newly created object>,  ← New binding
+    outer: <Global Environment>
+}
+Process:
+  1. New empty object created: {}
+  2. this = new object
+  3. new object.[[Prototype]] = Constructor.prototype
+  4. Constructor body executes
+  5. Return new object (implicit)
+Output: "Constructor: {}"
+Return: { value: 5 }
+
+4. indirectCall.call(context, 5, 3)
+───────────────────────────────────
+Execution Context: {
+    VariableEnvironment: { x: 5, y: 3 },
+    ThisBinding: context,  ← Explicit binding
+    outer: <Global Environment>
+}
+Output: "Indirect: 5 3 10"
+Return: 18
+
+5. indirectCall.apply(context, [5, 3])
+──────────────────────────────────────
+Same as call, but arguments passed as array
+Execution Context: Same as above
+Output: "Indirect: 5 3 10"
+Return: 18
+
+6. boundFunc(3)
+───────────────
+Execution Context: {
+    VariableEnvironment: { x: 5 (pre-bound), y: 3 },
+    ThisBinding: context,  ← Permanently bound
+    outer: <Global Environment>
+}
+Output: "Indirect: 5 3 10"
+Return: 18
+*/
+```
+
+### **6.4 Expression Evaluation**
+
+Expressions are evaluated during execution phase following specific rules.
+
+#### **Expression Evaluation Order:**
+
+```javascript
+function expressionDemo() {
+    // 1. Arithmetic expressions
+    const a = 2 + 3 * 4;  // Operator precedence
+    console.log("a:", a);  // 14, not 20
+    
+    // 2. Logical expressions (short-circuit)
+    const b = false && expensiveOperation();  // expensiveOperation not called
+    console.log("b:", b);  // false
+    
+    const c = true || expensiveOperation();  // expensiveOperation not called
+    console.log("c:", c);  // true
+    
+    // 3. Function call expressions
+    const d = Math.max(1, 2, 3);
+    console.log("d:", d);  // 3
+    
+    // 4. Conditional (ternary) expression
+    const e = a > 10 ? "large" : "small";
+    console.log("e:", e);  // "large"
+    
+    // 5. Object/Array expressions
+    const f = { x: 1, y: 2 };
+    const g = [1, 2, 3];
+    
+    function expensiveOperation() {
+        console.log("Expensive operation called");
+        return true;
+    }
+}
+
+expressionDemo();
+
+/*
+═══════════════════════════════════════════════════════════
+EXPRESSION EVALUATION DETAILS
+═══════════════════════════════════════════════════════════
+
+Expression: const a = 2 + 3 * 4;
+─────────────────────────────────
+
+Evaluation Steps:
+1. Scan expression for operators
+2. Apply precedence rules:
+   * (multiplication) has higher precedence than + (addition)
+3. Evaluate: 3 * 4 = 12
+4. Evaluate: 2 + 12 = 14
+5. Assign: a = 14
+
+Operator Precedence (high to low):
+  () [] .           // Grouping, member access
+  ++ -- ! ~         // Unary
+  * / %             // Multiplication, division, modulo
+  + -               // Addition, subtraction
+  < <= > >=         // Comparison
+  == != === !==     // Equality
+  &&                // Logical AND
+  ||                // Logical OR
+  ?:                // Conditional
+  = += -= etc       // Assignment
+
+Expression: const b = false && expensiveOperation();
+─────────────────────────────────────────────────────
+
+Evaluation Steps (Short-Circuit):
+1. Evaluate left operand: false
+2. && operator: if left is false, don't evaluate right
+3. Return: false
+4. Assign: b = false
+
+expensiveOperation() is NEVER called!
+
+Expression: const c = true || expensiveOperation();
+────────────────────────────────────────────────────
+
+Evaluation Steps (Short-Circuit):
+1. Evaluate left operand: true
+2. || operator: if left is true, don't evaluate right
+3. Return: true
+4. Assign: c = true
+
+expensiveOperation() is NEVER called!
+
+Expression: const d = Math.max(1, 2, 3);
+─────────────────────────────────────────
+
+Evaluation Steps:
+1. Evaluate arguments left-to-right: 1, 2, 3
+2. Call Math.max with arguments
+3. New execution context created for Math.max
+4. Math.max executes and returns 3
+5. Assign: d = 3
+
+Expression: const e = a > 10 ? "large" : "small";
+──────────────────────────────────────────────────
+
+Evaluation Steps:
+1. Evaluate condition: a > 10
+   a is 14, so 14 > 10 = true
+2. Condition is true, evaluate first branch: "large"
+3. Don't evaluate second branch: "small"
+4. Assign: e = "large"
+
+Expression: const f = { x: 1, y: 2 };
+───────────────────────────────────────
+
+Evaluation Steps:
+1. Create new object in heap
+2. Evaluate property values: 1, 2
+3. Set properties: x = 1, y = 2
+4. Create reference on stack
+5. Assign: f = <reference to object>
+
+Memory:
+  Stack: f → <ref to 0x1000>
+  Heap:  0x1000: { x: 1, y: 2 }
+*/
+```
+
+#### **Complex Expression Evaluation:**
+
+```javascript
+function complexExpressions() {
+    let x = 0;
+    
+    // Expression with side effects
+    const a = (x = 5, x + 10);  // Comma operator
+    console.log("a:", a, "x:", x);  // 15, 5
+    
+    // Nested function calls
+    const b = parseInt(String(Math.random() * 100));
+    console.log("b:", b);
+    
+    // Chained property access
+    const obj = {
+        nested: {
+            deep: {
+                value: 42
+            }
+        }
+    };
+    const c = obj.nested.deep.value;
+    console.log("c:", c);  // 42
+    
+    // Computed property access
+    const prop = "nested";
+    const d = obj[prop]["deep"]["value"];
+    console.log("d:", d);  // 42
+    
+    // Spread operator
+    const arr1 = [1, 2, 3];
+    const arr2 = [0, ...arr1, 4];
+    console.log("arr2:", arr2);  // [0, 1, 2, 3, 4]
+}
+
+complexExpressions();
+
+/*
+═══════════════════════════════════════════════════════════
+COMPLEX EVALUATION EXAMPLES
+═══════════════════════════════════════════════════════════
+
+Expression: const a = (x = 5, x + 10);
+────────────────────────────────────────
+
+Comma operator evaluates left-to-right, returns last value
+
+Step 1: Evaluate x = 5
+  Result: 5
+  Side effect: x is now 5
+
+Step 2: Evaluate x + 10
+  x is 5, so 5 + 10 = 15
+  Result: 15
+
+Step 3: Comma operator returns last value
+  Return: 15
+
+Step 4: Assign: a = 15
+
+Final State: a = 15, x = 5
+
+Expression: const b = parseInt(String(Math.random() * 100));
+─────────────────────────────────────────────────────────────
+
+Evaluation is inside-out (innermost first):
+
+Step 1: Math.random()
+  New EC created for Math.random
+  Returns: 0.12345... (random number)
+  EC destroyed
+
+Step 2: Math.random() * 100
+  0.12345... * 100 = 12.345...
+  Returns: 12.345...
+
+Step 3: String(12.345...)
+  New EC created for String constructor
+  Converts to: "12.345..."
+  Returns: "12.345..."
+  EC destroyed
+
+Step 4: parseInt("12.345...")
+  New EC created for parseInt
+  Parses integer part: 12
+  Returns: 12
+  EC destroyed
+
+Step 5: Assign: b = 12
+
+Expression: const c = obj.nested.deep.value;
+─────────────────────────────────────────────
+
+Member access evaluation (left-to-right):
+
+Step 1: Resolve 'obj'
+  Look up obj in current environment
+  Found: <reference to object>
+
+Step 2: obj.nested
+  Access 'nested' property
+  Result: <reference to nested object>
+
+Step 3: obj.nested.deep
+  Access 'deep' property on nested object
+  Result: <reference to deep object>
+
+Step 4: obj.nested.deep.value
+  Access 'value' property on deep object
+  Result: 42
+
+Step 5: Assign: c = 42
+
+Expression: const arr2 = [0, ...arr1, 4];
+──────────────────────────────────────────
+
+Spread operator evaluation:
+
+Step 1: Create new array: []
+
+Step 2: Add first element: [0]
+
+Step 3: Spread arr1
+  arr1 is [1, 2, 3]
+  Add each element: [0, 1, 2, 3]
+
+Step 4: Add last element: [0, 1, 2, 3, 4]
+
+Step 5: Assign: arr2 = <reference to new array>
+
+Memory:
+  Heap:
+    arr1: [1, 2, 3]
+    arr2: [0, 1, 2, 3, 4]  ← New array, not same as arr1
+*/
+```
+
+### **6.5 Statement Execution Order**
+
+Statements execute in order during the execution phase, with control flow statements altering the order.
+
+#### **Statement Types and Execution:**
+
+```javascript
+function statementDemo() {
+    console.log("1. Expression Statement");
+    
+    // 2. Declaration Statement
+    const x = 10;
+    let y = 20;
+    var z = 30;
+    
+    // 3. Conditional Statement
+    if (x > 5) {
+        console.log("2. If block executed");
+    } else {
+        console.log("2. Else block (not executed)");
+    }
+    
+    // 4. Loop Statement
+    for (let i = 0; i < 3; i++) {
+        console.log("3. Loop iteration:", i);
+    }
+    
+    // 5. Switch Statement
+    switch (x) {
+        case 10:
+            console.log("4. Switch case 10");
+            break;
+        case 20:
+            console.log("4. Switch case 20 (not executed)");
+            break;
+        default:
+            console.log("4. Default case (not executed)");
+    }
+    
+    // 6. Try-Catch Statement
+    try {
+        console.log("5. Try block");
+        // throw new Error("Test");
+    } catch (e) {
+        console.log("5. Catch block (not executed)");
+    } finally {
+        console.log("6. Finally block");
+    }
+    
+    // 7. Return Statement
+    console.log("7. Before return");
+    return "done";
+    console.log("8. After return (not executed)");
+}
+
+statementDemo();
+
+/*
+═══════════════════════════════════════════════════════════
+STATEMENT EXECUTION FLOW
+═══════════════════════════════════════════════════════════
+
+Sequential Execution:
+─────────────────────
+Statements execute one after another unless:
+- Control flow statement (if, for, while, switch)
+- Jump statement (return, break, continue, throw)
+- Function call (creates new execution context)
+
+EXECUTION TIMELINE:
+
+Time 1: Line 2
+  Statement: console.log("1. Expression Statement");
+  Type: Expression Statement
+  Action: Execute expression, discard result
+  Output: "1. Expression Statement"
+
+Time 2: Lines 5-7
+  Statement: const x = 10; let y = 20; var z = 30;
+  Type: Declaration Statements
+  Action: Initialize variables (TDZ ends for let/const)
+  Memory Update:
+    LexicalEnvironment: { x: 10, y: 20 }
+    VariableEnvironment: { z: 30 }
+
+Time 3: Lines 10-14
+  Statement: if (x > 5) { ... }
+  Type: Conditional Statement
+  
+  Step 1: Evaluate condition
+    x > 5 → 10 > 5 → true
+  
+  Step 2: Condition is true, execute if block
+    New Block Execution Context created
+    Execute: console.log("2. If block executed");
+    Output: "2. If block executed"
+    Block context destroyed
+  
+  Step 3: Skip else block
+    Else block NOT executed
+
+Time 4: Lines 17-19
+  Statement: for (let i = 0; i < 3; i++)
+  Type: Loop Statement
+  
+  Iteration 1:
+    New Block Context: { i: 0 }
+    Condition: 0 < 3 → true
+    Execute body: console.log("3. Loop iteration:", 0);
+    Output: "3. Loop iteration: 0"
+    Update: i++ → i = 1
+    Block context destroyed
+  
+  Iteration 2:
+    New Block Context: { i: 1 }
+    Condition: 1 < 3 → true
+    Execute body: console.log("3. Loop iteration:", 1);
+    Output: "3. Loop iteration: 1"
+    Update: i++ → i = 2
+    Block context destroyed
+  
+  Iteration 3:
+    New Block Context: { i: 2 }
+    Condition: 2 < 3 → true
+    Execute body: console.log("3. Loop iteration:", 2);
+    Output: "3. Loop iteration: 2"
+    Update: i++ → i = 3
+    Block context destroyed
+  
+  Check condition: 3 < 3 → false
+  Exit loop
+
+Time 5: Lines 22-31
+  Statement: switch (x) { ... }
+  Type: Switch Statement
+  
+  Step 1: Evaluate discriminant
+    x → 10
+  
+  Step 2: Check cases (strict equality ===)
+    case 10: 10 === 10 → true ✓
+    Execute: console.log("4. Switch case 10");
+    Output: "4. Switch case 10"
+    
+    Execute: break;
+    Exit switch statement
+  
+  Step 3: Skip remaining cases
+    case 20 and default NOT executed
+
+Time 6: Lines 34-41
+  Statement: try { ... } catch { ... } finally { ... }
+  Type: Try-Catch Statement
+  
+  Step 1: Execute try block
+    Execute: console.log("5. Try block");
+    Output: "5. Try block"
+    No error thrown, skip catch block
+  
+  Step 2: Skip catch block
+    Catch block NOT executed
+  
+  Step 3: Execute finally block
+    Finally block ALWAYS executes
+    Execute: console.log("6. Finally block");
+    Output: "6. Finally block"
+
+Time 7: Lines 44-46
+  Statement: return "done";
+  Type: Return Statement
+  
+  Step 1: Execute console.log before return
+    Output: "7. Before return"
+  
+  Step 2: Evaluate return expression
+    "done"
+  
+  Step 3: Return from function
+    Return value: "done"
+    Function execution context destroyed
+    Control returns to caller
+  
+  Step 4: Unreachable code
+    Line 46: console.log("8. After return...");
+    This line is NEVER executed (unreachable)
+
+═══════════════════════════════════════════════════════════
+COMPLETE OUTPUT:
+═══════════════════════════════════════════════════════════
+1. Expression Statement
+2. If block executed
+3. Loop iteration: 0
+3. Loop iteration: 1
+3. Loop iteration: 2
+4. Switch case 10
+5. Try block
+6. Finally block
+7. Before return
+*/
+```
+
+#### **Control Flow and Execution Order:**
+
+```javascript
+function controlFlowDemo() {
+    console.log("Start");
+    
+    // Early return
+    for (let i = 0; i < 5; i++) {
+        console.log("Iteration:", i);
+        
+        if (i === 2) {
+            console.log("Returning early");
+            return "early exit";
+        }
+    }
+    
+    console.log("This won't execute");
+    return "normal exit";
+}
+
+const result = controlFlowDemo();
+console.log("Result:", result);
+
+/*
+═══════════════════════════════════════════════════════════
+EXECUTION FLOW WITH EARLY RETURN
+═══════════════════════════════════════════════════════════
+
+Iteration 0:
+  console.log("Iteration:", 0);
+  Output: "Iteration: 0"
+  Condition i === 2: false
+  Continue loop
+
+Iteration 1:
+  console.log("Iteration:", 1);
+  Output: "Iteration: 1"
+  Condition i === 2: false
+  Continue loop
+
+Iteration 2:
+  console.log("Iteration:", 2);
+  Output: "Iteration: 2"
+  Condition i === 2: true ✓
+  Execute: console.log("Returning early");
+  Output: "Returning early"
+  Execute: return "early exit";
+  
+  FUNCTION EXITS HERE
+  - Loop terminated
+  - Line 13 NOT executed
+  - Line 14 NOT executed
+  - Execution context destroyed
+  - Return to caller
+
+Back in Global Context:
+  const result = controlFlowDemo();
+  result = "early exit"
+  console.log("Result:", result);
+  Output: "Result: early exit"
+
+═══════════════════════════════════════════════════════════
+COMPLETE OUTPUT:
+═══════════════════════════════════════════════════════════
+Start
+Iteration: 0
+Iteration: 1
+Iteration: 2
+Returning early
+Result: early exit
+*/
+```
+
+---
+
+# **PART 3: HOISTING MECHANISMS**
+
+## **7. COMPLETE GUIDE TO HOISTING**
+
+### **7.1 What is Hoisting?**
+
+**Hoisting** is JavaScript's behavior of moving declarations to the top of their scope during the creation phase.
+
+#### **Core Concept:**
+
+```javascript
+// What you write:
+console.log(myVar);
+var myVar = 5;
+
+// How JavaScript interprets it:
+var myVar;  // Declaration hoisted to top
+console.log(myVar);  // undefined
+myVar = 5;  // Assignment stays in place
+
+/*
+═══════════════════════════════════════════════════════════
+HOISTING IS NOT PHYSICALLY MOVING CODE
+═══════════════════════════════════════════════════════════
+
+Hoisting is a MENTAL MODEL to explain the behavior.
+What actually happens:
+
+CREATION PHASE:
+- Scan code for declarations
+- Allocate memory for variables and functions
+- Initialize var to undefined
+- Store functions completely
+- Leave let/const uninitialized (TDZ)
+
+EXECUTION PHASE:
+- Execute code line by line
+- Assignments happen when reached
+*/
+```
+
+#### **What Gets Hoisted:**
+
+```javascript
+function hoistingExample() {
+    // What gets hoisted?
+    
+    console.log(a);  // undefined (var declaration hoisted)
+    console.log(b);  // ReferenceError (let in TDZ)
+    console.log(c);  // [Function] (function declaration hoisted)
+    console.log(d);  // undefined (var, but function expression not hoisted)
+    
+    var a = 10;
+    let b = 20;
+    
+    function c() {
+        return "Function";
+    }
+    
+    var d = function() {
+        return "Expression";
+    };
+}
+
+/*
+═══════════════════════════════════════════════════════════
+HOISTING CATEGORIES
+═══════════════════════════════════════════════════════════
+
+✓ HOISTED AND INITIALIZED:
+  - var declarations        → undefined
+  - function declarations   → complete function
+
+✓ HOISTED BUT NOT INITIALIZED (TDZ):
+  - let declarations        → TDZ
+  - const declarations      → TDZ
+  - class declarations      → TDZ
+
+✗ NOT HOISTED:
+  - Assignments
+  - Function expressions
+  - Arrow functions
+  - Initializers
+*/
+```
+
+### **7.2 Variable Hoisting (var)**
+
+Variables declared with `var` are hoisted and initialized to `undefined`.
+
+#### **Detailed var Hoisting:**
+
+```javascript
+function varHoisting() {
+    console.log("1:", x);  // undefined
+    console.log("2:", y);  // undefined
+    console.log("3:", z);  // undefined
+    
+    var x;
+    var y = 10;
+    var z = function() { return "func"; };
+    
+    console.log("4:", x);  // undefined
+    console.log("5:", y);  // 10
+    console.log("6:", z);  // [Function]
+}
+
+varHoisting();
+
+/*
+═══════════════════════════════════════════════════════════
+CREATION PHASE - VAR HOISTING
+═══════════════════════════════════════════════════════════
+
+Memory State After Creation Phase:
+{
+    VariableEnvironment: {
+        x: undefined,  ← Declared, initialized to undefined
+        y: undefined,  ← Declared, initialized to undefined
+        z: undefined   ← Declared, initialized to undefined
+    }
+}
+
+═══════════════════════════════════════════════════════════
+EXECUTION PHASE - LINE BY LINE
+═══════════════════════════════════════════════════════════
+
+Line 2: console.log("1:", x);
+  x exists in memory: undefined
+  Output: "1: undefined"
+
+Line 3: console.log("2:", y);
+  y exists in memory: undefined
+  Output: "2: undefined"
+
+Line 4: console.log("3:", z);
+  z exists in memory: undefined
+  Output: "3: undefined"
+
+Line 6: var x;
+  No-op (already declared in creation phase)
+
+Line 7: var y = 10;
+  Assignment: y = 10
+  Memory Update: y: undefined → 10
+
+Line 8: var z = function() { ... };
+  Assignment: z = <function object>
+  Memory Update: z: undefined → <function object>
+
+Line 10: console.log("4:", x);
+  x is still undefined (no assignment)
+  Output: "4: undefined"
+
+Line 11: console.log("5:", y);
+  y is now 10
+  Output: "5: 10"
+
+Line 12: console.log("6:", z);
+  z is now a function
+  Output: "6: [Function]"
+*/
+```
+
+#### **var Hoisting with Multiple Declarations:**
+
+```javascript
+var x = 1;
+
+function test() {
+    console.log("1:", x);  // undefined (not 1!)
+    
+    var x = 2;
+    
+    console.log("2:", x);  // 2
+}
+
+test();
+console.log("3:", x);  // 1
+
+/*
+═══════════════════════════════════════════════════════════
+WHY IS OUTPUT 'undefined' INSTEAD OF 1?
+═══════════════════════════════════════════════════════════
+
+Function Execution Context Creation Phase:
+{
+    VariableEnvironment: {
+        x: undefined  ← Local x declared, shadows global x
+    },
+    outer: <Global Environment>
+}
+
+The local 'var x' declaration is hoisted, creating a local
+variable that shadows the global x.
+
+EXECUTION PHASE:
+
+Line: console.log("1:", x);
+  Identifier Resolution:
+    1. Look in function's VariableEnvironment: x = undefined ✓
+    2. Don't look in global (local x found)
+  Output: "1: undefined"
+
+Line: var x = 2;
+  Assignment: x = 2
+  Memory Update: Function's x: undefined → 2
+
+Line: console.log("2:", x);
+  Output: "2: 2"
+
+Back in Global Context:
+
+Line: console.log("3:", x);
+  Global x unchanged
+  Output: "3: 1"
+*/
+```
+
+#### **var Hoisting in Loops:**
+
+```javascript
+// Common mistake with var in loops
+for (var i = 0; i < 3; i++) {
+    setTimeout(function() {
+        console.log("Loop var:", i);
+    }, 100);
+}
+// Output: 3, 3, 3 (not 0, 1, 2!)
+
+/*
+═══════════════════════════════════════════════════════════
+WHY ALL 3's?
+═══════════════════════════════════════════════════════════
+
+var is FUNCTION-SCOPED, not block-scoped!
+
+After loop completes:
+  Global: { i: 3 }
+
+All three setTimeout callbacks reference the SAME 'i':
+  Callback 1: console.log(i) → Global i → 3
+  Callback 2: console.log(i) → Global i → 3
+  Callback 3: console.log(i) → Global i → 3
+
+SOLUTION 1: Use let (block-scoped)
+for (let i = 0; i < 3; i++) {
+    setTimeout(function() {
+        console.log("Loop let:", i);
+    }, 100);
+}
+// Output: 0, 1, 2 ✓
+
+Each iteration creates new block scope with its own 'i'
+
+SOLUTION 2: IIFE (Immediately Invoked Function Expression)
+for (var i = 0; i < 3; i++) {
+    (function(j) {
+        setTimeout(function() {
+            console.log("Loop IIFE:", j);
+        }, 100);
+    })(i);
+}
+// Output: 0, 1, 2 ✓
+
+Each IIFE creates new function scope with its own 'j'
+*/
+```
+
+### **7.3 Variable Hoisting (let and const)**
+
+`let` and `const` are hoisted but remain uninitialized (Temporal Dead Zone).
+
+#### **Detailed let/const Hoisting:**
+
+```javascript
+function letConstHoisting() {
+    // Temporal Dead Zone (TDZ) starts here for x, y, z
+    
+    console.log("typeof x:", typeof x);  // ReferenceError
+    
+    // TDZ continues...
+    
+    let x = 10;  // TDZ ends for x
+    const y = 20;  // TDZ ends for y
+    
+    console.log("x:", x);  // 10
+    console.log("y:", y);  // 20
+    
+    // y = 30;  // TypeError: Assignment to constant variable
+}
+
+/*
+═══════════════════════════════════════════════════════════
+CREATION PHASE - LET/CONST HOISTING
+═══════════════════════════════════════════════════════════
+
+Memory State After Creation Phase:
+{
+    LexicalEnvironment: {
+        x: <uninitialized>,  ← In TDZ
+        y: <uninitialized>   ← In TDZ
+    }
+}
+
+The variables ARE hoisted (memory allocated) but NOT initialized.
+Any access before initialization causes ReferenceError.
+
+═══════════════════════════════════════════════════════════
+TEMPORAL DEAD ZONE (TDZ)
+═══════════════════════════════════════════════════════════
+
+TDZ is the period between:
+  START: Entering scope (function/block start)
+  END: Variable initialization (let/const declaration line)
+
+Function Start
+│
+├─ TDZ for x ────────────────────┐
+│                                 │
+│  Any access to x here          │
+│  throws ReferenceError          │
+│                                 │
+├─ let x = 10; ─────────────────┘ TDZ ends for x
+│
+├─ TDZ for y ────────────────────┐
+│                                 │
+├─ const y = 20; ───────────────┘ TDZ ends for y
+│
+Function End
+
+═══════════════════════════════════════════════════════════
+EXECUTION PHASE
+═══════════════════════════════════════════════════════════
+
+Line: console.log("typeof x:", typeof x);
+  Variable Resolution:
+    1. Look in LexicalEnvironment: x = <uninitialized>
+    2. x is in TDZ!
+  Throw: ReferenceError: Cannot access 'x' before initialization
+
+If we comment out that line:
+
+Line: let x = 10;
+  Initialization: x = 10
+  TDZ ends for x
+  Memory Update: x: <uninitialized> → 10
+
+Line: const y = 20;
+  Initialization: y = 20
+  TDZ ends for y
+  Memory Update: y: <uninitialized> → 20
+
+Line: console.log("x:", x);
+  Output: "x: 10"
+
+Line: console.log("y:", y);
+  Output: "y: 20"
+
+Line: y = 30;
+  Attempt to reassign const
+  Throw: TypeError: Assignment to constant variable
+*/
+```
+
+#### **let/const vs var: Side-by-Side Comparison:**
+
+```javascript
+// VAR EXAMPLE
+function varExample() {
+    console.log("var before:", myVar);  // undefined
+    var myVar = 10;
+    console.log("var after:", myVar);   // 10
+}
+
+// LET EXAMPLE
+function letExample() {
+    // console.log("let before:", myLet);  // ReferenceError
+    let myLet = 20;
+    console.log("let after:", myLet);   // 20
+}
+
+// CONST EXAMPLE
+function constExample() {
+    // console.log("const before:", myConst);  // ReferenceError
+    const myConst = 30;
+    console.log("const after:", myConst);  // 30
+    // myConst = 40;  // TypeError
+}
+
+/*
+═══════════════════════════════════════════════════════════
+HOISTING COMPARISON
+═══════════════════════════════════════════════════════════
+
+╔══════════════╦════════════╦════════════╦══════════════╗
+║   Aspect     ║    var     ║    let     ║    const     ║
+╠══════════════╬════════════╬════════════╬══════════════╣
+║ Hoisted?     ║    Yes     ║    Yes     ║     Yes      ║
+║ Initialized? ║ undefined  ║     No     ║      No      ║
+║ TDZ?         ║     No     ║    Yes     ║     Yes      ║
+║ Access Before║ undefined  ║ ReferError ║  ReferError  ║
+║ Reassignable?║    Yes     ║    Yes     ║      No      ║
+║ Redeclarable?║    Yes     ║     No     ║      No      ║
+║ Scope        ║  Function  ║   Block    ║    Block     ║
+║ Environment  ║  Variable  ║  Lexical   ║   Lexical    ║
+╚══════════════╩════════════╩════════════╩══════════════╝
+
+CREATION PHASE MEMORY:
+
+varExample:
+{
+    VariableEnvironment: {
+        myVar: undefined  ← Ready to use (returns undefined)
+    }
+}
+
+letExample:
+{
+    LexicalEnvironment: {
+        myLet: <uninitialized>  ← NOT ready (throws error)
+    }
+}
+
+constExample:
+{
+    LexicalEnvironment: {
+        myConst: <uninitialized>  ← NOT ready (throws error)
+    }
+}
+*/
+```
+
+### **7.4 Function Declaration Hoisting**
+
+Function declarations are fully hoisted - both name and implementation.
+
+#### **Complete Function Declaration Hoisting:**
+
+```javascript
+// Can call before declaration!
+console.log(greet());        // "Hello!"
+console.log(add(5, 3));      // 8
+console.log(multiply(4, 2)); // 8
+
+function greet() {
+    return "Hello!";
+}
+
+function add(a, b) {
+    return a + b;
+}
+
+function multiply(x, y) {
+    return x * y;
+}
+
+/*
+═══════════════════════════════════════════════════════════
+FUNCTION DECLARATION HOISTING
+═══════════════════════════════════════════════════════════
+
+CREATION PHASE:
+
+Global Execution Context:
+{
+    VariableEnvironment: {
+        greet: <function object>,     ← Fully stored
+        add: <function object>,        ← Fully stored
+        multiply: <function object>    ← Fully stored
+    }
+}
+
+Function objects contain:
+{
+    [[Code]]: <function body>,
+    [[Scope]]: <lexical environment reference>,
+    [[FormalParameters]]: <parameter list>,
+    prototype: <prototype object>
+}
+
+All functions are IMMEDIATELY available for use!
+
+═══════════════════════════════════════════════════════════
+EXECUTION PHASE:
+═══════════════════════════════════════════════════════════
+
+Line: console.log(greet());
+  1. Resolve 'greet': Found in VariableEnvironment ✓
+  2. Check if callable: Yes, it's a function ✓
+  3. Create new execution context for greet()
+  4. Execute function body
+  5. Return "Hello!"
+  Output: "Hello!"
+
+Line: console.log(add(5, 3));
+  1. Resolve 'add': Found ✓
+  2. Create execution context: { a: 5, b: 3 }
+  3. Execute: return 5 + 3
+  4. Return 8
+  Output: 8
+
+Line: console.log(multiply(4, 2));
+  1. Resolve 'multiply': Found ✓
+  2. Create execution context: { x: 4, y: 2 }
+  3. Execute: return 4 * 2
+  4. Return 8
+  Output: 8
+
+Lines 6-14: Function declarations
+  No-op (already in memory from creation phase)
+*/
+```
+
+#### **Function Hoisting vs Variables:**
+
+```javascript
+console.log(typeof foo);  // "function"
+console.log(typeof bar);  // "undefined"
+console.log(typeof baz);  // ReferenceError
+
+function foo() {
+    return "foo";
+}
+
+var bar = function() {
+    return "bar";
+};
+
+let baz = function() {
+    return "baz";
+};
+
+/*
+═══════════════════════════════════════════════════════════
+CREATION PHASE ANALYSIS
+═══════════════════════════════════════════════════════════
+
+VariableEnvironment:
+{
+    foo: <function object>,  ← Function declaration: fully hoisted
+    bar: undefined           ← var: hoisted, initialized to undefined
+}
+
+LexicalEnvironment:
+{
+    baz: <uninitialized>     ← let: hoisted but in TDZ
+}
+
+═══════════════════════════════════════════════════════════
+EXECUTION PHASE:
+═══════════════════════════════════════════════════════════
+
+Line: console.log(typeof foo);
+  foo is a function object
+  Output: "function"
+
+Line: console.log(typeof bar);
+  bar is undefined
+  Output: "undefined"
+
+Line: console.log(typeof baz);
+  baz is in TDZ
+  Throw: ReferenceError
+*/
+```
+
+#### **Nested Function Hoisting:**
+
+```javascript
+function outer() {
+    console.log("1:", inner);  // [Function: inner]
+    
+    inner();  // "Inner function"
+    
+    function inner() {
+        console.log("Inner function");
+    }
+    
+    console.log("2:", inner);  // [Function: inner]
+}
+
+outer();
+
+/*
+═══════════════════════════════════════════════════════════
+NESTED FUNCTION HOISTING
+═══════════════════════════════════════════════════════════
+
+When outer() is called:
+
+CREATION PHASE:
+outer Execution Context:
+{
+    VariableEnvironment: {
+        inner: <function object>  ← Hoisted within outer's scope
+    }
+}
+
+EXECUTION PHASE:
+
+Line: console.log("1:", inner);
+  inner already in memory
+  Output: "1: [Function: inner]"
+
+Line: inner();
+  Call inner function
+  Create new execution context for inner()
+  Execute: console.log("Inner function");
+  Output: "Inner function"
+  Destroy inner's execution context
+
+Line: function inner() { ... }
+  No-op (already in memory)
+
+Line: console.log("2:", inner);
+  Output: "2: [Function: inner]"
+*/
+```
+
+### **7.5 Function Expression Hoisting**
+
+Function expressions follow variable hoisting rules, not function hoisting rules.
+
+#### **Function Expression Behavior:**
+
+```javascript
+// console.log(expression1());  // TypeError: expression1 is not a function
+// console.log(expression2());  // ReferenceError
+
+var expression1 = function() {
+    return "Expression 1";
+};
+
+let expression2 = function() {
+    return "Expression 2";
+};
+
+console.log(expression1());  // "Expression 1"
+console.log(expression2());  // "Expression 2"
+
+/*
+═══════════════════════════════════════════════════════════
+FUNCTION EXPRESSION HOISTING
+═══════════════════════════════════════════════════════════
+
+CREATION PHASE:
+
+VariableEnvironment:
+{
+    expression1: undefined  ← Variable hoisted, not function!
+}
+
+LexicalEnvironment:
+{
+    expression2: <uninitialized>  ← In TDZ
+}
+
+The function objects are NOT created yet!
+
+═══════════════════════════════════════════════════════════
+EXECUTION PHASE:
+═══════════════════════════════════════════════════════════
+
+Line: console.log(expression1());
+  1. Resolve expression1: undefined
+  2. Try to call undefined(): TypeError
+  
+  Why TypeError (not ReferenceError)?
+  - expression1 exists (it's undefined)
+  - But undefined is not callable
+  - TypeError: expression1 is not a function
+
+Line: console.log(expression2());
+  1. Resolve expression2: <uninitialized>
+  2. In TDZ!
+  - ReferenceError: Cannot access before initialization
+
+Line: var expression1 = function() { ... };
+  1. Create function object in heap
+  2. Assign reference to expression1
+  Memory Update: expression1: undefined → <function object>
+
+Line: let expression2 = function() { ... };
+  1. Create function object in heap
+  2. Initialize expression2 with reference
+  3. TDZ ends
+  Memory Update: expression2: <uninitialized> → <function object>
+
+Line: console.log(expression1());
+  1. Resolve expression1: <function object> ✓
+  2. Call function
+  3. Return "Expression 1"
+  Output: "Expression 1"
+
+Line: console.log(expression2());
+  1. Resolve expression2: <function object> ✓
+  2. Call function
+  3. Return "Expression 2"
+  Output: "Expression 2"
+*/
+```
+
+#### **Named Function Expressions:**
+
+```javascript
+console.log(typeof myFunc);  // "undefined"
+console.log(typeof funcName);  // "undefined"
+
+var myFunc = function funcName() {
+    console.log("Inside:", typeof funcName);  // "function"
+    return "result";
+};
+
+console.log(myFunc());         // "Inside: function", then "result"
+console.log(typeof myFunc);    // "function"
+// console.log(funcName());    // ReferenceError
+
+/*
+═══════════════════════════════════════════════════════════
+NAMED FUNCTION EXPRESSION
+═══════════════════════════════════════════════════════════
+
+var myFunc = function funcName() { ... };
+                       ^^^^^^^^
+                       This name is only visible INSIDE the function!
+
+CREATION PHASE:
+{
+    VariableEnvironment: {
+        myFunc: undefined  ← Only myFunc is hoisted, not funcName
+    }
+}
+
+EXECUTION PHASE:
+
+After assignment:
+  myFunc: <function object>
+  
+Inside function:
+  funcName is accessible (refers to the function itself)
+  Useful for recursion!
+
+Outside function:
+  funcName is NOT accessible
+  
+Example: Recursion with named function expression
+var factorial = function fact(n) {
+    if (n <= 1) return 1;
+    return n * fact(n - 1);  ← Can use funcName here!
+};
+
+console.log(factorial(5));  // 120 ✓
+console.log(fact(5));        // ReferenceError ✗
+*/
+```
+
+### **7.6 Arrow Function Hoisting**
+
+Arrow functions follow the same hoisting rules as function expressions.
+
+#### **Arrow Function Behavior:**
+
+```javascript
+// console.log(arrow1());  // TypeError
+// console.log(arrow2());  // ReferenceError
+
+var arrow1 = () => "Arrow 1";
+let arrow2 = () => "Arrow 2";
+const arrow3 = () => "Arrow 3";
+
+console.log(arrow1());  // "Arrow 1"
+console.log(arrow2());  // "Arrow 2"
+console.log(arrow3());  // "Arrow 3"
+
+/*
+═══════════════════════════════════════════════════════════
+ARROW FUNCTION HOISTING
+═══════════════════════════════════════════════════════════
+
+CREATION PHASE:
+
+VariableEnvironment:
+{
+    arrow1: undefined  ← Variable hoisted only
+}
+
+LexicalEnvironment:
+{
+    arrow2: <uninitialized>,  ← TDZ
+    arrow3: <uninitialized>   ← TDZ
+}
+
+Arrow functions are NOT hoisted!
+Only the variable names are hoisted.
+
+═══════════════════════════════════════════════════════════
+KEY DIFFERENCES: Arrow vs Regular Functions
+═══════════════════════════════════════════════════════════
+
+╔════════════════════╦═══════════════╦═════════════════╗
+║     Feature        ║   Regular     ║     Arrow       ║
+╠════════════════════╬═══════════════╬═════════════════╣
+║ Hoisted?           ║  Yes (decl)   ║      No         ║
+║ Own 'this'?        ║     Yes       ║      No         ║
+║ Own 'arguments'?   ║     Yes       ║      No         ║
+║ Can be constructor?║     Yes       ║      No         ║
+║ Own 'super'?       ║     Yes       ║      No         ║
+║ Own 'new.target'?  ║     Yes       ║      No         ║
+║ Has prototype?     ║     Yes       ║      No         ║
+╚════════════════════╩═══════════════╩═════════════════╝
+
+Example: Arrow function 'this' is lexical
+
+const obj = {
+    name: "Object",
+    
+    regularMethod: function() {
+        console.log("Regular this:", this.name);  // "Object"
+        
+        const arrowInside = () => {
+            console.log("Arrow this:", this.name);  // "Object"
+        };
+        arrowInside();
+    },
+    
+    arrowMethod: () => {
+        console.log("Arrow method this:", this.name);  // undefined
+        // 'this' is from surrounding scope (global)
+    }
+};
+
+obj.regularMethod();  // Both log "Object"
+obj.arrowMethod();    // Logs undefined
+*/
+```
+
+### **7.7 Class Hoisting**
+
+Classes are hoisted but remain in the Temporal Dead Zone like `let` and `const`.
+
+#### **Class Hoisting Behavior:**
+
+```javascript
+// console.log(MyClass);  // ReferenceError
+// const instance = new MyClass();  // ReferenceError
+
+class MyClass {
+    constructor(name) {
+        this.name = name;
+    }
+    
+    greet() {
+        console.log(`Hello, ${this.name}`);
+    }
+}
+
+const instance = new MyClass("John");
+instance.greet();  // "Hello, John"
+
+/*
+═══════════════════════════════════════════════════════════
+CLASS HOISTING
+═══════════════════════════════════════════════════════════
+
+CREATION PHASE:
+
+LexicalEnvironment:
+{
+    MyClass: <uninitialized>  ← In TDZ!
+}
+
+Classes are hoisted like let/const, not like function declarations!
+
+═══════════════════════════════════════════════════════════
+WHY ARE CLASSES IN TDZ?
+═══════════════════════════════════════════════════════════
+
+Reason: To catch errors early
+
+If classes were initialized like function declarations:
+  - Could use class before its superclass is defined
+  - Could create inconsistent inheritance hierarchies
+  - Harder to reason about code flow
+
+TDZ ensures:
+  - Classes are fully defined before use
+  - Inheritance relationships are clear
+  - Errors are caught at declaration time
+
+═══════════════════════════════════════════════════════════
+CLASS DECLARATION VS CLASS EXPRESSION
+═══════════════════════════════════════════════════════════
+
+// Class Declaration
+class DeclarationClass {
+    constructor() {}
+}
+
+// Class Expression
+const ExpressionClass = class {
+    constructor() {}
+};
+
+// Named Class Expression
+const NamedClass = class InternalName {
+    constructor() {
+        console.log(InternalName);  // Accessible inside
+    }
+};
+// console.log(InternalName);  // ReferenceError - not accessible outside
+
+Both follow let/const hoisting rules (TDZ)!
+
+═══════════════════════════════════════════════════════════
+CLASS HOISTING WITH INHERITANCE
+═══════════════════════════════════════════════════════════
+
+// This works:
+class Parent {
+    constructor() {
+        this.type = "parent";
+    }
+}
+
+class Child extends Parent {
+    constructor() {
+        super();
+        this.type = "child";
+    }
+}
+
+// This doesn't work (TDZ):
+class Child extends Parent {  // ReferenceError
+    constructor() {
+        super();
+    }
+}
+
+class Parent {
+    constructor() {}
+}
+
+Because Parent is still in TDZ when Child is declared!
+*/
+```
+
+### **7.8 Import/Export Hoisting**
+
+Module imports are hoisted to the top of the module scope.
+
+#### **Import Hoisting:**
+
+```javascript
+// This works! Imports are hoisted
+console.log(add(5, 3));  // 8
+
+import { add } from './math.js';
+
+// This also works!
+multiply(4, 2);  // 8
+
+import { multiply } from './math.js';
+
+/*
+═══════════════════════════════════════════════════════════
+IMPORT HOISTING
+═══════════════════════════════════════════════════════════
+
+All import statements are hoisted to the top of the module!
+
+How it's interpreted:
+import { add } from './math.js';
+import { multiply } from './math.js';
+
+console.log(add(5, 3));
+multiply(4, 2);
+
+═══════════════════════════════════════════════════════════
+IMPORT HOISTING RULES
+═══════════════════════════════════════════════════════════
+
+1. All imports are processed BEFORE any code runs
+2. Import bindings are READ-ONLY (constant)
+3. Import bindings are LIVE (changes in source reflect)
+4. Imports are always at module scope
+
+// math.js
+export let count = 0;
+export function increment() {
+    count++;
+}
+
+// app.js
+import { count, increment } from './math.js';
+
+console.log(count);  // 0
+increment();
+console.log(count);  // 1 ← LIVE binding!
+
+// count = 5;  // TypeError: Assignment to constant
+
+═══════════════════════════════════════════════════════════
+DEFAULT EXPORTS
+═══════════════════════════════════════════════════════════
+
+// utils.js
+export default function() {
+    return "default";
+}
+
+// app.js
+// This works (hoisted):
+console.log(myFunc());  // "default"
+
+import myFunc from './utils.js';
+
+═══════════════════════════════════════════════════════════
+DYNAMIC IMPORTS (NOT HOISTED)
+═══════════════════════════════════════════════════════════
+
+// These are NOT hoisted (they're expressions):
+
+if (condition) {
+    import('./module.js')  // Returns a Promise
+        .then(module => {
+            module.doSomething();
+        });
+}
+
+async function loadModule() {
+    const module = await import('./module.js');
+    module.doSomething();
+}
+*/
+```
+
+### **7.9 Hoisting Priority and Precedence**
+
+When multiple declarations with the same name exist, there's a priority order.
+
+#### **Declaration Priority:**
+
+```javascript
+console.log(foo);  // [Function: foo]
+
+function foo() {
+    return "function";
+}
+
+var foo = "variable";
+
+console.log(foo);  // "variable"
+
+/*
+═══════════════════════════════════════════════════════════
+HOISTING PRIORITY
+═══════════════════════════════════════════════════════════
+
+CREATION PHASE (Priority Order):
+
+1. Function parameters (if in function scope)
+2. Function declarations
+3. Variable declarations (var)
+
+Process:
+Step 1: Scan for function declarations
+  foo: <function object>
+
+Step 2: Scan for variable declarations
+  foo: already exists, skip creating new binding
+  (Only ONE foo in memory)
+
+Memory State:
+{
+    foo: <function object>  ← Function takes priority
+}
+
+EXECUTION PHASE:
+
+Line: console.log(foo);
+  foo is <function object>
+  Output: [Function: foo]
+
+Line: function foo() { ... }
+  No-op (already in memory)
+
+Line: var foo = "variable";
+  Assignment: foo = "variable"
+  Memory Update: foo: <function object> → "variable"
+
+Line: console.log(foo);
+  foo is now "variable"
+  Output: "variable"
+
+═══════════════════════════════════════════════════════════
+RULE: Function Declarations Trump Variable Declarations
+      But Assignments Still Happen!
+═══════════════════════════════════════════════════════════
+*/
+```
+
+#### **Complex Priority Example:**
+
+```javascript
+var a = 1;
+function a() {}
+console.log(typeof a);  // "number"
+
+function b() {}
+var b = 2;
+console.log(typeof b);  // "number"
+
+function c() {}
+var c;
+console.log(typeof c);  // "function"
+
+/*
+═══════════════════════════════════════════════════════════
+DETAILED ANALYSIS
+═══════════════════════════════════════════════════════════
+
+Example 1: var a = 1; function a() {}
+───────────────────────────────────────
+
+CREATION PHASE:
+1. Function declaration: a = <function object>
+2. Variable declaration: a already exists, skip
+
+EXECUTION PHASE:
+Line: var a = 1;
+  Assignment: a = 1
+  Memory: a: <function object> → 1
+
+Line: function a() {}
+  No-op
+
+Line: console.log(typeof a);
+  a is 1 (number)
+  Output: "number"
+
+Example 2: function b() {} var b = 2;
+───────────────────────────────────────
+
+CREATION PHASE:
+1. Function declaration: b = <function object>
+2. Variable declaration: b already exists, skip
+
+EXECUTION PHASE:
+Line: function b() {}
+  No-op
+
+Line: var b = 2;
+  Assignment: b = 2
+  Memory: b: <function object> → 2
+
+Line: console.log(typeof b);
+  b is 2 (number)
+  Output: "number"
+
+Example 3: function c() {} var c;
+───────────────────────────────────
+
+CREATION PHASE:
+1. Function declaration: c = <function object>
+2. Variable declaration: c already exists, skip
+
+EXECUTION PHASE:
+Line: function c() {}
+  No-op
+
+Line: var c;
+  Just declaration, no assignment
+  Memory: c: <function object> (unchanged!)
+
+Line: console.log(typeof c);
+  c is still <function object>
+  Output: "function"
+*/
+```
+
+### **7.10 Common Hoisting Pitfalls**
+
+#### **Pitfall 1: Variable Shadowing**
+
+```javascript
+var value = "global";
+
+function test() {
+    console.log(value);  // undefined (not "global"!)
+    
+    if (true) {
+        var value = "local";
+    }
+    
+    console.log(value);  // "local"
+}
+
+test();
+
+/*
+═══════════════════════════════════════════════════════════
+PITFALL EXPLANATION
+═══════════════════════════════════════════════════════════
+
+var is FUNCTION-SCOPED, not block-scoped!
+
+How JavaScript interprets this:
+
+function test() {
+    var value;  ← Hoisted to function top, shadows global!
+    
+    console.log(value);  // undefined (local value)
+    
+    if (true) {
+        value = "local";  // Assignment to local value
+    }
+    
+    console.log(value);  // "local"
+}
+
+The global 'value' is NEVER accessed inside test()!
+
+═══════════════════════════════════════════════════════════
+FIX: Use let/const (block-scoped)
+═══════════════════════════════════════════════════════════
+
+function testFixed() {
+    console.log(value);  // "global" ✓
+    
+    if (true) {
+        let value = "local";  // Block-scoped
+        console.log(value);   // "local"
+    }
+    
+    console.log(value);  // "global" ✓
+}
+*/
+```
+
+#### **Pitfall 2: Loop Variables**
+
+```javascript
+var funcs = [];
+
+for (var i = 0; i < 3; i++) {
+    funcs.push(function() {
+        console.log(i);
+    });
+}
+
+funcs[0]();  // 3 (not 0!)
+funcs[1]();  // 3 (not 1!)
+funcs[2]();  // 3 (not 2!)
+
+/*
+═══════════════════════════════════════════════════════════
+PITFALL EXPLANATION
+═══════════════════════════════════════════════════════════
+
+var i is hoisted to function/global scope!
+
+After loop completes:
+  i = 3
+
+All three functions close over the SAME 'i':
+
+funcs[0]:  closure → i (= 3)
+funcs[1]:  closure → i (= 3)
+funcs[2]:  closure → i (= 3)
+
+═══════════════════════════════════════════════════════════
+FIX 1: Use let (block-scoped)
+═══════════════════════════════════════════════════════════
+
+var funcs = [];
+
+for (let i = 0; i < 3; i++) {  ← let instead of var
+    funcs.push(function() {
+        console.log(i);
+    });
+}
+
+funcs[0]();  // 0 ✓
+funcs[1]();  // 1 ✓
+funcs[2]();  // 2 ✓
+
+Each iteration creates new block scope with its own 'i'!
+
+═══════════════════════════════════════════════════════════
+FIX 2: IIFE
+═══════════════════════════════════════════════════════════
+
+var funcs = [];
+
+for (var i = 0; i < 3; i++) {
+    (function(j) {  ← IIFE with parameter
+        funcs.push(function() {
+            console.log(j);
+        });
+    })(i);  ← Pass current i value
+}
+
+funcs[0]();  // 0 ✓
+funcs[1]();  // 1 ✓
+funcs[2]();  // 2 ✓
+*/
+```
+
+#### **Pitfall 3: Conditional Function Declarations**
+
+```javascript
+console.log(typeof foo);  // ?
+
+if (true) {
+    function foo() {
+        return "inside if";
+    }
+}
+
+console.log(typeof foo);  // ?
+
+/*
+═══════════════════════════════════════════════════════════
+PITFALL: NON-STANDARD BEHAVIOR
+═══════════════════════════════════════════════════════════
+
+Function declarations inside blocks are NOT standardized
+in ES5 and earlier!
+
+Different browsers behave differently:
+- Some hoist to function scope
+- Some treat as block-scoped
+- Some hoist but initialize in block
+
+ES6+ standardizes: Block-scoped (like let)
+
+Best Practice: NEVER use function declarations in blocks!
+
+═══════════════════════════════════════════════════════════
+CORRECT APPROACH
+═══════════════════════════════════════════════════════════
+
+// Option 1: Function expression with let/const
+let foo;
+if (true) {
+    foo = function() {
+        return "inside if";
+    };
+}
+
+// Option 2: Declare at function scope
+function foo() {
+    return "default";
+}
+
+if (condition) {
+    foo = function() {
+        return "overridden";
+    };
+}
+*/
+```
+
+#### **Pitfall 4: Missing Declarations**
+
+```javascript
+function test() {
+    value = 10;  // Forgot var/let/const!
+    console.log(value);  // 10
+}
+
+test();
+console.log(window.value);  // 10 (Oops! Global variable!)
+
+/*
+═══════════════════════════════════════════════════════════
+PITFALL: ACCIDENTAL GLOBALS
+═══════════════════════════════════════════════════════════
+
+Without var/let/const, assignment creates GLOBAL variable!
+
+Process:
+1. Look for 'value' in current scope: NOT FOUND
+2. Look in outer scopes: NOT FOUND
+3. Reach global scope: NOT FOUND
+4. Non-strict mode: CREATE GLOBAL VARIABLE
+   Strict mode: ReferenceError ✓
+
+═══════════════════════════════════════════════════════════
+FIX: Always Use Declarations + Strict Mode
+═══════════════════════════════════════════════════════════
+
+'use strict';
+
+function test() {
+    value = 10;  // ReferenceError: value is not defined ✓
+}
+
+Or:
+
+function test() {
+    let value = 10;  // Local variable ✓
+    console.log(value);
+}
+
+test();
+console.log(window.value);  // undefined ✓
+*/
+```
+
+---
+
+## **8. TEMPORAL DEAD ZONE (TDZ)**
+
+### **8.1 Understanding TDZ**
+
+The **Temporal Dead Zone** is the time between entering a scope and a variable being initialized.
+
+#### **What is TDZ?**
+
+```javascript
+function tdzExample() {
+    // TDZ starts here for 'x'
+    // ─────────────────────────────────
+    
+    console.log("Before declaration");
+    
+    // Still in TDZ for 'x'
+    // console.log(x);  // ReferenceError
+    
+    // Still in TDZ for 'x'
+    // let y = x;  // ReferenceError
+    
+    // TDZ ends here when initialization happens
+    // ─────────────────────────────────
+    let x = 10;
+    
+    console.log(x);  // 10 - Now accessible
+}
+
+tdzExample();
+
+/*
+═══════════════════════════════════════════════════════════
+TDZ TIMELINE
+═══════════════════════════════════════════════════════════
+
+Function Entry (Scope Entry)
+│
+├─ CREATION PHASE
+│  Memory allocated: x = <uninitialized>
+│
+├─ EXECUTION PHASE BEGINS
+│
+├─ TDZ STARTS ←─────────┐
+│                        │
+│  console.log("Before") │ Any access to 'x'
+│  ✓ Works               │ throws ReferenceError
+│                        │
+│  console.log(x)        │
+│  ✗ ReferenceError      │
+│                        │
+│  let y = x             │
+│  ✗ ReferenceError      │
+│                        │
+├─ let x = 10; ←─────────┘ TDZ ENDS
+│
+│  console.log(x)
+│  ✓ Works (x = 10)
+│
+Function Exit
+
+═══════════════════════════════════════════════════════════
+KEY INSIGHT
+═══════════════════════════════════════════════════════════
+
+TDZ is NOT about hoisting vs no hoisting!
+- let/const ARE hoisted (memory allocated)
+- But they're NOT initialized
+- They remain in TDZ until declaration line is reached
+
+var IS initialized (to undefined) during creation phase
+let/const are NOT initialized during creation phase
+*/
+```
+
+### **8.2 TDZ in Different Scenarios**
+
+#### **Scenario 1: typeof in TDZ**
+
+```javascript
+// typeof with undeclared variable: safe
+console.log(typeof undeclaredVariable);  // "undefined"
+
+// typeof with TDZ variable: ReferenceError!
+console.log(typeof declaredLater);  // ReferenceError!
+let declaredLater = 10;
+
+/*
+═══════════════════════════════════════════════════════════
+WHY DIFFERENT BEHAVIOR?
+═══════════════════════════════════════════════════════════
+
+undeclaredVariable:
+  - Not in any environment
+  - typeof returns "undefined" (safe)
+
+declaredLater:
+  - In LexicalEnvironment: <uninitialized>
+  - In TDZ!
+  - Any access (even typeof) throws error
+
+This is INTENTIONAL design:
+- Catch potential bugs early
+- Make TDZ violations explicit
+- Encourage declaring variables at top of scope
+*/
+```
+
+#### **Scenario 2: Default Parameters and TDZ**
+
+```javascript
+function withDefaults(a = b, b = 2) {
+    console.log(a, b);
+}
+
+withDefaults();  // ReferenceError!
+
+/*
+═══════════════════════════════════════════════════════════
+EXPLANATION
+═══════════════════════════════════════════════════════════
+
+Parameter initialization happens left-to-right:
+
+Step 1: Initialize 'a'
+  a = b  ← But 'b' is in TDZ!
+  ReferenceError: Cannot access 'b' before initialization
+
+Parameters create their own scope (like let/const):
+
+function withDefaults(a = b, b = 2) {
+  // Parameter scope:
+  // a: <uninitialized>
+  // b: <uninitialized>
+  
+  // Try to initialize a with b (which is in TDZ)
+  // ERROR!
+}
+
+═══════════════════════════════════════════════════════════
+CORRECT ORDER
+═══════════════════════════════════════════════════════════
+
+function withDefaults(b = 2, a = b) {
+    console.log(a, b);
+}
+
+withDefaults();  // 2, 2 ✓
+
+Process:
+1. Initialize b = 2
+2. Initialize a = b (b is already initialized) ✓
+*/
+```
+
+#### **Scenario 3: TDZ in Loops**
+
+```javascript
+// Example 1: for loop
+for (let i = 0; i < 3; i++) {
+    console.log(i);  // 0, 1, 2
+}
+// console.log(i);  // ReferenceError (block-scoped)
+
+// Example 2: TDZ within loop body
+for (let i = 0; i < 3; i++) {
+    // console.log(x);  // ReferenceError (TDZ)
+    let x = i * 2;
+    console.log(x);  // 0, 2, 4
+}
+
+/*
+═══════════════════════════════════════════════════════════
+TDZ IN LOOP ITERATIONS
+═══════════════════════════════════════════════════════════
+
+Each iteration creates NEW block scope with NEW 'i':
+
+Iteration 0:
+┌──────────────────────────┐
+│ Block Scope 0            │
+│ i: 0 (initialized)       │
+│ x: <uninitialized> ← TDZ │
+│ ...                      │
+│ let x = i * 2;           │
+│ x: 0 (TDZ ends)          │
+└──────────────────────────┘
+
+Iteration 1:
+┌──────────────────────────┐
+│ Block Scope 1            │
+│ i: 1 (initialized)       │
+│ x: <uninitialized> ← TDZ │
+│ ...                      │
+│ let x = i * 2;           │
+│ x: 2 (TDZ ends)          │
+└──────────────────────────┘
+
+Each 'x' has its own TDZ per iteration!
+*/
+```
+
+#### **Scenario 4: Class TDZ**
+
+```javascript
+// console.log(MyClass);  // ReferenceError
+
+class MyClass {
+    constructor(value) {
+        this.value = value;
+    }
+}
+
+console.log(MyClass);  // [class MyClass]
+
+// Inheritance with TDZ
+class Child extends Parent {  // ReferenceError!
+    constructor() {
+        super();
+    }
+}
+
+class Parent {
+    constructor() {
+        this.type = "parent";
+    }
+}
+
+/*
+═══════════════════════════════════════════════════════════
+CLASS TDZ
+═══════════════════════════════════════════════════════════
+
+Classes are in TDZ just like let/const:
+
+LexicalEnvironment:
+{
+    MyClass: <uninitialized>  ← TDZ
+}
+
+After declaration:
+{
+    MyClass: <class object>
+}
+
+═══════════════════════════════════════════════════════════
+INHERITANCE ISSUE
+═══════════════════════════════════════════════════════════
+
+class Child extends Parent {  // Parent in TDZ!
+    ...
+}
+
+class Parent {
+    ...
+}
+
+Fix: Declare parent before child
+
+class Parent {
+    ...
+}
+
+class Child extends Parent {  ✓
+    ...
+}
+*/
+```
+
+### **8.3 Why TDZ Exists**
+
+#### **Reason 1: Catch Errors Early**
+
+```javascript
+// Without TDZ (like var):
+function withVar() {
+    console.log(count);  // undefined - bug goes unnoticed!
+    // ... 100 lines of code ...
+    var count = 10;
+}
+
+// With TDZ (let/const):
+function withLet() {
+    console.log(count);  // ReferenceError - bug caught immediately!
+    // ... 100 lines of code ...
+    let count = 10;
+}
+
+/*
+TDZ makes bugs explicit and immediate:
+- Accessing before initialization: ERROR
+- Typos in variable names: ERROR
+- Unintended early access: ERROR
+
+This is BETTER for code quality!
+*/
+```
+
+#### **Reason 2: const Semantics**
+
+```javascript
+// const must be initialized at declaration
+const x = 10;  // ✓
+// const y;     // ✗ SyntaxError
+
+/*
+If const wasn't in TDZ:
+
+const x;  // What would x be? undefined?
+x = 10;   // Can we assign to const?
+
+TDZ enforces const semantics:
+- Must initialize at declaration
+- Value known before use
+- No undefined state
+*/
+```
+
+#### **Reason 3: Consistent Behavior**
+
+```javascript
+// let and const behave consistently
+let x = 10;
+const y = 20;
+
+// Both:
+// - Block-scoped
+// - In TDZ before declaration
+// - Cannot be redeclared
+// - Not attached to global object
+
+// Only difference: const can't be reassigned
+x = 15;  // ✓
+// y = 25;  // ✗ TypeError
+```
+
+### **8.4 TDZ with Function Parameters**
+
+#### **Parameter Scope and TDZ:**
+
+```javascript
+function parameterTDZ(a = 1, b = a, c = d, d = 2) {
+    console.log(a, b, c, d);
+}
+
+parameterTDZ();  // ReferenceError
+
+/*
+═══════════════════════════════════════════════════════════
+PARAMETER INITIALIZATION ORDER
+═══════════════════════════════════════════════════════════
+
+Parameters initialize LEFT TO RIGHT:
+
+Step 1: a = 1
+  ✓ Literal value, no problem
+
+Step 2: b = a
+  ✓ 'a' already initialized
+
+Step 3: c = d
+  ✗ 'd' is in TDZ!
+  ReferenceError
+
+═══════════════════════════════════════════════════════════
+PARAMETER SCOPE IS SEPARATE
+═══════════════════════════════════════════════════════════
+
+function example(x = y, y = 2) {
+    console.log(x, y);
+}
+
+// Not the same as:
+function example() {
+    let x = y;  // Can't access y yet
+    let y = 2;
+}
+
+Parameters have their own initialization scope!
+*/
+```
+
+#### **Advanced Parameter TDZ:**
+
+```javascript
+let x = "outer";
+
+function test(y = x, x = 5) {
+    console.log(y, x);
+}
+
+test();  // ReferenceError
+
+/*
+═══════════════════════════════════════════════════════════
+DETAILED ANALYSIS
+═══════════════════════════════════════════════════════════
+
+Parameter Scope:
+┌─────────────────────────────────────┐
+│ y: <uninitialized>                  │
+│ x: <uninitialized>                  │
+└─────────────────────────────────────┘
+     │
+     ↓ outer scope
+┌─────────────────────────────────────┐
+│ Function Scope                      │
+│ (empty)                             │
+└─────────────────────────────────────┘
+     │
+     ↓ outer scope
+┌─────────────────────────────────────┐
+│ Global Scope                        │
+│ x: "outer"                          │
+└─────────────────────────────────────┘
+
+Initialization:
+1. Initialize y = x
+   - Look for x in parameter scope: <uninitialized> (TDZ!)
+   - DON'T look in outer scopes yet!
+   - ReferenceError
+
+Why not use outer x?
+- Parameter x shadows outer x
+- Even though parameter x isn't initialized yet
+- This is the SAME NAME SHADOWING rule as:
+
+function test() {
+    console.log(x);  // ReferenceError
+    let x = 5;
+}
+let x = "outer";
+test();
+
+═══════════════════════════════════════════════════════════
+CORRECT VERSION
+═══════════════════════════════════════════════════════════
+
+let outer = "outer";
+
+function test(x = 5, y = outer) {
+    console.log(y, x);
+}
+
+test();  // "outer", 5 ✓
+
+Or use different parameter names:
+
+function test(y = x, z = 5) {
+    console.log(y, z);
+}
+let x = "outer";
+test();  // "outer", 5 ✓
+*/
+```
+
+### **8.5 TDZ in Loops**
+
+#### **for Loop TDZ:**
+
+```javascript
+// Correct: let in for loop
+for (let i = 0; i < 3; i++) {
+    setTimeout(() => console.log(i), 100);
+}
+// Output: 0, 1, 2
+
+// Incorrect: var in for loop
+for (var j = 0; j < 3; j++) {
+    setTimeout(() => console.log(j), 100);
+}
+// Output: 3, 3, 3
+
+/*
+═══════════════════════════════════════════════════════════
+HOW let CREATES NEW SCOPE PER ITERATION
+═══════════════════════════════════════════════════════════
+
+for (let i = 0; i < 3; i++) {
+    // Each iteration:
+}
+
+Is similar to:
+{
+    let i = 0;
+    {
+        // Iteration 0: new binding for i = 0
+        setTimeout(() => console.log(i), 100);
+    }
+    i++;
+    {
+        // Iteration 1: new binding for i = 1
+        setTimeout(() => console.log(i), 100);
+    }
+    i++;
+    {
+        // Iteration 2: new binding for i = 2
+        setTimeout(() => console.log(i), 100);
+    }
+}
+
+═══════════════════════════════════════════════════════════
+BLOCK SCOPE PER ITERATION
+═══════════════════════════════════════════════════════════
+
+Iteration 0:
+┌──────────────────────────┐
+│ i: 0                     │ ← Separate 'i'
+│ setTimeout closes over   │
+│ THIS specific i          │
+└──────────────────────────┘
+
+Iteration 1:
+┌──────────────────────────┐
+│ i: 1                     │ ← Different 'i'
+│ setTimeout closes over   │
+│ THIS specific i          │
+└──────────────────────────┘
+
+Iteration 2:
+┌──────────────────────────┐
+│ i: 2                     │ ← Yet another 'i'
+│ setTimeout closes over   │
+│ THIS specific i          │
+└──────────────────────────┘
+
+With var (function-scoped):
+┌──────────────────────────┐
+│ j: 3 (after loop)        │ ← SAME 'j'
+│ All three setTimeouts    │
+│ close over SAME j        │
+└──────────────────────────┘
+*/
+```
+
+### **8.6 TDZ Best Practices**
+
+#### **Best Practice 1: Declare at Top of Scope**
+
+```javascript
+// Bad: Declarations scattered
+function scattered() {
+    console.log("Starting...");
+    doSomething();
+    let x = 10;
+    doMore();
+    const y = 20;
+    finish();
+}
+
+// Good: Declarations at top
+function organized() {
+    let x = 10;
+    const y = 20;
+    
+    console.log("Starting...");
+    doSomething();
+    doMore();
+    finish();
+}
+
+/*
+Benefits:
+1. No TDZ surprises
+2. Easy to see all variables at a glance
+3. Clear initialization order
+4. Follows scope-based thinking
+*/
+```
+
+#### **Best Practice 2: Initialize When Declaring**
+
+```javascript
+// Bad: Declaration without initialization
+let x;
+// ... 50 lines of code ...
+x = calculateValue();
+
+// Good: Declare and initialize together
+let x = calculateValue();
+
+/*
+Benefits:
+1. Shorter TDZ (or none at all)
+2. Clearer code intent
+3. Easier to track variable state
+4. Less chance of using uninitialized variable
+*/
+```
+
+#### **Best Practice 3: Use const by Default**
+
+```javascript
+// Prefer const
+const PI = 3.14159;
+const user = { name: "John" };
+const items = [1, 2, 3];
+
+// Use let only when reassignment needed
+let counter = 0;
+counter++;
+
+// Avoid var
+// var oldStyle = "avoid";
+
+/*
+Benefits:
+1. const has shortest TDZ (initialization required)
+2. Signals immutable binding
+3. Prevents accidental reassignment
+4. More modern and maintainable code
+
+Progression:
+const > let > var
+(best)  (ok)  (avoid)
+*/
+```
+
+---
+
+
+
+
