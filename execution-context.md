@@ -600,6 +600,7 @@ A Declarative Environment Record is a general-purpose structure. It can store di
     - initialized immediately to undefined during creation phase
 Both live in DER, but the binding type differs.
 <br>
+
 So, the DER can behave differently depending on how it is created.
 - The DER used for function `var` bindings does NOT use TDZ rules.
 - The DER used for `let/const` DOES use TDZ rules.
