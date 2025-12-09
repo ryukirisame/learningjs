@@ -656,5 +656,50 @@ So closure resolution eventually reaches the GER and finds:
 
 This is why inner functions can access global `var` like `z`.
 
+# Scope Chain
+## Identifier Resolution Algorithm
+At any scope level (function or global)
+1. Step 1 - Check the current Lexical Environment's ER
+    - if found, return
+2. Step 2 - Check the current Variable Environment's ER  (check the VE of the same execution context after checking that context’s LE)
+    - if found, return
+3. Step 3: If not found, move upward via the Lexical Environment's outer pointer
+
+Now at the parent scope:
+4. Step 4: Check parent Lexical Environment's ER
+    - if found, return
+5. Step 5: Check parent Variable Environment’s ER
+    - if found, return
+6. Step 6: if not found, continue going up via parent's `LE.outer` and repeat the process
+
+Eventually reach the Gloabl Lexical Environment (GER)
+7. Step 7: Check global Declarative ER (let/const)
+    - if found, return
+8. Step 8: Check global Object ER (OER) (var/function → global object)
+    - if found, return
+9. If not found -> ReferenceError
+
+So, basically, the outer pointer makes JS reach the outer environment context.
+```js
+current LE → parent LE → parent LE → ... → global LE
+```
+
+#### NOTE: In case of closures, both LE and VE of the parent is preserved.
+```js
+function outer() {
+    var a = 1;     // belongs to VE of outer
+    let b = 2;     // belongs to LE of outer
+
+    return function inner() {
+        console.log(a, b); // closure
+    }
+}
+```
+When outer() returns inner:
+- `inner` keeps a reference to outer’s LE
+- `inner` also keeps access to outer’s VE
+So both a and b remain alive in memory because `inner` needs access to parent's `let`, `const`, `params` and `var` etc.
+
+
 
 
