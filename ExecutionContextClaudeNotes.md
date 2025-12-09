@@ -12526,4 +12526,2351 @@ But call/apply/bind still useful for:
 ---
 
 
+# **PART 6: CLOSURES AND EXECUTION CONTEXT (CONTINUED)**
+
+## **13. CLOSURES DEEP DIVE (CONTINUED)**
+
+### **13.8 IIFE and Closures (Continued)**
+
+#### **IIFE for Initialization (Continued):**
+
+```javascript
+// Initialize application with IIFE
+const app = (function() {
+    console.log("App initializing...");
+    
+    // Setup code runs immediately
+    const config = { version: "1.0", debug: true };
+    const startTime = Date.now();
+    
+    console.log("App initialized!");
+    
+    // Return public interface
+    return {
+        version: config.version,
+        
+        getUptime: function() {
+            return Date.now() - startTime;
+        },
+        
+        isDebug: function() {
+            return config.debug;
+        }
+    };
+})();
+
+// Already initialized when code runs!
+console.log(app.version);     // "1.0"
+console.log(app.getUptime()); // milliseconds since init
+
+/*
+Benefits of IIFE for initialization:
+1. Code runs immediately
+2. Initialization variables (config, startTime) are private
+3. Only public API exposed
+4. No global pollution
+5. Self-contained module
+*/
+```
+
+#### **IIFE vs Modules (Modern Comparison):**
+
+```javascript
+// OLD: IIFE Pattern
+const oldModule = (function() {
+    let privateVar = "private";
+    
+    return {
+        getPrivate: function() {
+            return privateVar;
+        }
+    };
+})();
+
+// MODERN: ES6 Modules
+// module.js
+let privateVar = "private";
+
+export function getPrivate() {
+    return privateVar;
+}
+
+// main.js
+import { getPrivate } from './module.js';
+
+/*
+Comparison:
+
+IIFE:
+✓ Works in all environments
+✓ Immediate execution
+✓ No build tool needed
+✗ All code in one file
+✗ Manual dependency management
+✗ All or nothing exports
+
+ES6 Modules:
+✓ Better syntax
+✓ Named exports/imports
+✓ Tree shaking support
+✓ Built-in dependency management
+✗ Needs modern environment or transpiler
+✗ Async loading
+
+When to use IIFE (still relevant):
+- Legacy browser support
+- Quick scripts/demos
+- Inline initialization
+- No build process
+*/
+```
+
+---
+
+## **14. ADVANCED CLOSURE PATTERNS**
+
+### **14.1 Module Pattern**
+
+The Module Pattern uses closures to create private and public members.
+
+#### **Basic Module Pattern:**
+
+```javascript
+const CounterModule = (function() {
+    // Private variables
+    let count = 0;
+    let maxCount = 100;
+    let listeners = [];
+    
+    // Private methods
+    function notifyListeners() {
+        listeners.forEach(listener => {
+            listener(count);
+        });
+    }
+    
+    function validateCount(value) {
+        return typeof value === 'number' && value >= 0 && value <= maxCount;
+    }
+    
+    // Public API
+    return {
+        increment: function() {
+            if (count < maxCount) {
+                count++;
+                notifyListeners();
+                return count;
+            }
+            throw new Error("Max count reached");
+        },
+        
+        decrement: function() {
+            if (count > 0) {
+                count--;
+                notifyListeners();
+                return count;
+            }
+            throw new Error("Count cannot be negative");
+        },
+        
+        getCount: function() {
+            return count;
+        },
+        
+        setCount: function(value) {
+            if (validateCount(value)) {
+                count = value;
+                notifyListeners();
+                return count;
+            }
+            throw new Error("Invalid count value");
+        },
+        
+        subscribe: function(listener) {
+            if (typeof listener === 'function') {
+                listeners.push(listener);
+            }
+        },
+        
+        reset: function() {
+            count = 0;
+            notifyListeners();
+        }
+    };
+})();
+
+// Usage
+CounterModule.subscribe(function(count) {
+    console.log("Count changed to:", count);
+});
+
+CounterModule.increment();  // Count changed to: 1
+CounterModule.increment();  // Count changed to: 2
+CounterModule.setCount(50); // Count changed to: 50
+CounterModule.reset();      // Count changed to: 0
+
+/*
+═══════════════════════════════════════════════════════════
+MODULE PATTERN STRUCTURE
+═══════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────┐
+│ CounterModule (Public API)              │
+│ - increment()                           │
+│ - decrement()                           │
+│ - getCount()                            │
+│ - setCount()                            │
+│ - subscribe()                           │
+│ - reset()                               │
+│                                         │
+│ All methods [[Scope]]: ───────┐         │
+└───────────────────────────────┼─────────┘
+                                ↓
+                    ┌─────────────────────────┐
+                    │ Module Lexical Env      │
+                    │ (Private)               │
+                    │                         │
+                    │ count: 0                │
+                    │ maxCount: 100           │
+                    │ listeners: []           │
+                    │ notifyListeners: <fn>   │
+                    │ validateCount: <fn>     │
+                    └─────────────────────────┘
+
+Benefits:
+1. ✓ Encapsulation (private/public separation)
+2. ✓ Data protection (validation)
+3. ✓ Single instance (singleton)
+4. ✓ Clean API
+5. ✓ Observable pattern (listeners)
+*/
+```
+
+#### **Revealing Module Pattern:**
+
+```javascript
+const DataStore = (function() {
+    // Private state
+    let data = new Map();
+    let changeLog = [];
+    
+    // Private methods
+    function logChange(operation, key, value) {
+        changeLog.push({
+            operation: operation,
+            key: key,
+            value: value,
+            timestamp: Date.now()
+        });
+    }
+    
+    function validateKey(key) {
+        if (typeof key !== 'string' || key.length === 0) {
+            throw new Error("Invalid key");
+        }
+    }
+    
+    // Public methods (named privately)
+    function set(key, value) {
+        validateKey(key);
+        data.set(key, value);
+        logChange('set', key, value);
+    }
+    
+    function get(key) {
+        validateKey(key);
+        return data.get(key);
+    }
+    
+    function remove(key) {
+        validateKey(key);
+        const value = data.get(key);
+        data.delete(key);
+        logChange('remove', key, value);
+    }
+    
+    function clear() {
+        data.clear();
+        logChange('clear', null, null);
+    }
+    
+    function getHistory() {
+        return [...changeLog];  // Return copy
+    }
+    
+    function size() {
+        return data.size;
+    }
+    
+    // Reveal public interface
+    return {
+        set: set,
+        get: get,
+        remove: remove,
+        clear: clear,
+        getHistory: getHistory,
+        size: size
+    };
+})();
+
+// Usage
+DataStore.set('name', 'John');
+DataStore.set('age', 30);
+console.log(DataStore.get('name'));  // "John"
+console.log(DataStore.size());       // 2
+DataStore.remove('age');
+console.log(DataStore.getHistory());
+// [
+//   { operation: 'set', key: 'name', value: 'John', timestamp: ... },
+//   { operation: 'set', key: 'age', value: 30, timestamp: ... },
+//   { operation: 'remove', key: 'age', value: 30, timestamp: ... }
+// ]
+
+/*
+Revealing Module Pattern vs Regular Module Pattern:
+
+REVEALING MODULE:
+- All functions defined with clear names
+- Easy to see what's public/private
+- Return statement clearly shows public API
+- Better for maintainability
+
+REGULAR MODULE:
+- Public methods defined in return object
+- Private methods don't need separate declaration
+- Can be more concise
+
+Choose based on preference and code style.
+*/
+```
+
+#### **Module with Configuration:**
+
+```javascript
+const Logger = (function(config) {
+    // Configuration with defaults
+    const settings = Object.assign({
+        prefix: '[LOG]',
+        timestamp: true,
+        level: 'info',
+        maxLogs: 100
+    }, config);
+    
+    // Private state
+    let logs = [];
+    const levels = {
+        debug: 0,
+        info: 1,
+        warn: 2,
+        error: 3
+    };
+    
+    // Private methods
+    function shouldLog(level) {
+        return levels[level] >= levels[settings.level];
+    }
+    
+    function formatMessage(level, message) {
+        let formatted = settings.prefix + ' ';
+        
+        if (settings.timestamp) {
+            formatted += new Date().toISOString() + ' ';
+        }
+        
+        formatted += '[' + level.toUpperCase() + '] ' + message;
+        return formatted;
+    }
+    
+    function addToHistory(level, message) {
+        logs.push({
+            level: level,
+            message: message,
+            timestamp: Date.now()
+        });
+        
+        // Keep only last maxLogs entries
+        if (logs.length > settings.maxLogs) {
+            logs.shift();
+        }
+    }
+    
+    // Public API
+    return {
+        debug: function(message) {
+            if (shouldLog('debug')) {
+                const formatted = formatMessage('debug', message);
+                console.log(formatted);
+                addToHistory('debug', message);
+            }
+        },
+        
+        info: function(message) {
+            if (shouldLog('info')) {
+                const formatted = formatMessage('info', message);
+                console.log(formatted);
+                addToHistory('info', message);
+            }
+        },
+        
+        warn: function(message) {
+            if (shouldLog('warn')) {
+                const formatted = formatMessage('warn', message);
+                console.warn(formatted);
+                addToHistory('warn', message);
+            }
+        },
+        
+        error: function(message) {
+            if (shouldLog('error')) {
+                const formatted = formatMessage('error', message);
+                console.error(formatted);
+                addToHistory('error', message);
+            }
+        },
+        
+        getHistory: function() {
+            return [...logs];
+        },
+        
+        clearHistory: function() {
+            logs = [];
+        },
+        
+        setLevel: function(level) {
+            if (levels.hasOwnProperty(level)) {
+                settings.level = level;
+            }
+        }
+    };
+})({
+    prefix: '[MyApp]',
+    timestamp: true,
+    level: 'debug',
+    maxLogs: 50
+});
+
+// Usage
+Logger.debug("Application starting");     // Shows if level is debug
+Logger.info("User logged in");            // Shows
+Logger.warn("Deprecated API used");       // Shows
+Logger.error("Connection failed");        // Shows
+
+Logger.setLevel('warn');  // Now only warn and error show
+Logger.debug("Won't show");  // Hidden
+Logger.warn("Will show");    // Shows
+
+console.log(Logger.getHistory());  // Get all logged messages
+```
+
+### **14.2 Factory Functions**
+
+Factory functions create and return objects, using closures for private data.
+
+#### **Basic Factory Function:**
+
+```javascript
+function createPerson(name, age) {
+    // Private variables
+    let _name = name;
+    let _age = age;
+    let _id = Math.random().toString(36).substr(2, 9);
+    
+    // Private methods
+    function validateAge(newAge) {
+        return typeof newAge === 'number' && newAge >= 0 && newAge <= 150;
+    }
+    
+    // Return public interface
+    return {
+        getName: function() {
+            return _name;
+        },
+        
+        setName: function(newName) {
+            if (typeof newName === 'string' && newName.length > 0) {
+                _name = newName;
+            }
+        },
+        
+        getAge: function() {
+            return _age;
+        },
+        
+        setAge: function(newAge) {
+            if (validateAge(newAge)) {
+                _age = newAge;
+            }
+        },
+        
+        getId: function() {
+            return _id;
+        },
+        
+        toString: function() {
+            return `Person(${_name}, ${_age}, ${_id})`;
+        }
+    };
+}
+
+const john = createPerson('John', 30);
+const jane = createPerson('Jane', 25);
+
+console.log(john.getName());  // "John"
+console.log(jane.getName());  // "Jane"
+
+john.setAge(31);
+console.log(john.getAge());   // 31
+
+// Private variables not accessible
+console.log(john._name);  // undefined
+console.log(john._age);   // undefined
+
+/*
+═══════════════════════════════════════════════════════════
+FACTORY FUNCTION VS CONSTRUCTOR
+═══════════════════════════════════════════════════════════
+
+FACTORY FUNCTION:
+function createPerson(name) {
+    return {
+        getName: () => name
+    };
+}
+const p = createPerson('John');
+
+✓ No 'new' keyword needed
+✓ Easy to create private variables
+✓ Flexible return values
+✓ Clear syntax
+✗ Methods recreated for each instance
+✗ No shared prototype
+
+CONSTRUCTOR FUNCTION:
+function Person(name) {
+    this.name = name;
+}
+Person.prototype.getName = function() {
+    return this.name;
+};
+const p = new Person('John');
+
+✓ Shared methods via prototype
+✓ Less memory per instance
+✓ Standard pattern
+✗ Requires 'new'
+✗ Harder to create true private variables
+✗ 'this' can be tricky
+*/
+```
+
+#### **Factory with Inheritance:**
+
+```javascript
+// Base factory
+function createAnimal(name, species) {
+    let _name = name;
+    let _species = species;
+    
+    return {
+        getName: function() {
+            return _name;
+        },
+        
+        getSpecies: function() {
+            return _species;
+        },
+        
+        makeSound: function() {
+            return "Some generic sound";
+        },
+        
+        toString: function() {
+            return `${_species} named ${_name}`;
+        }
+    };
+}
+
+// Extended factory
+function createDog(name, breed) {
+    // Create animal
+    const animal = createAnimal(name, 'Dog');
+    
+    // Private variables specific to dogs
+    let _breed = breed;
+    let _tricks = [];
+    
+    // Add/override methods
+    return Object.assign({}, animal, {
+        getBreed: function() {
+            return _breed;
+        },
+        
+        makeSound: function() {
+            return "Woof!";
+        },
+        
+        learnTrick: function(trick) {
+            _tricks.push(trick);
+        },
+        
+        getTricks: function() {
+            return [..._tricks];
+        },
+        
+        toString: function() {
+            return `${_breed} dog named ${animal.getName()}`;
+        }
+    });
+}
+
+const dog = createDog('Buddy', 'Golden Retriever');
+
+console.log(dog.getName());      // "Buddy"
+console.log(dog.getSpecies());   // "Dog"
+console.log(dog.getBreed());     // "Golden Retriever"
+console.log(dog.makeSound());    // "Woof!"
+
+dog.learnTrick('sit');
+dog.learnTrick('fetch');
+console.log(dog.getTricks());    // ['sit', 'fetch']
+
+/*
+Composition over inheritance:
+- createDog includes createAnimal
+- Adds new methods
+- Overrides existing methods
+- Both have their own closures
+- Flexible and maintainable
+*/
+```
+
+#### **Factory with State Machine:**
+
+```javascript
+function createConnection(url) {
+    let _state = 'disconnected';
+    let _url = url;
+    let _retryCount = 0;
+    const _maxRetries = 3;
+    
+    // State machine
+    const states = {
+        disconnected: ['connecting'],
+        connecting: ['connected', 'disconnected'],
+        connected: ['disconnecting'],
+        disconnecting: ['disconnected']
+    };
+    
+    // Private methods
+    function canTransitionTo(newState) {
+        return states[_state].includes(newState);
+    }
+    
+    function transition(newState) {
+        if (canTransitionTo(newState)) {
+            console.log(`State: ${_state} -> ${newState}`);
+            _state = newState;
+            return true;
+        }
+        console.error(`Invalid transition: ${_state} -> ${newState}`);
+        return false;
+    }
+    
+    function simulateConnection() {
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                if (Math.random() > 0.3) {
+                    resolve();
+                } else {
+                    reject(new Error('Connection failed'));
+                }
+            }, 1000);
+        });
+    }
+    
+    // Public API
+    return {
+        connect: async function() {
+            if (_state !== 'disconnected') {
+                console.error('Already connected or connecting');
+                return false;
+            }
+            
+            transition('connecting');
+            
+            try {
+                await simulateConnection();
+                transition('connected');
+                _retryCount = 0;
+                console.log(`Connected to ${_url}`);
+                return true;
+            } catch (error) {
+                console.error(error.message);
+                transition('disconnected');
+                
+                if (_retryCount < _maxRetries) {
+                    _retryCount++;
+                    console.log(`Retrying... (${_retryCount}/${_maxRetries})`);
+                    return this.connect();
+                }
+                
+                return false;
+            }
+        },
+        
+        disconnect: function() {
+            if (_state !== 'connected') {
+                console.error('Not connected');
+                return false;
+            }
+            
+            transition('disconnecting');
+            setTimeout(() => {
+                transition('disconnected');
+                console.log('Disconnected');
+            }, 500);
+            
+            return true;
+        },
+        
+        getState: function() {
+            return _state;
+        },
+        
+        isConnected: function() {
+            return _state === 'connected';
+        }
+    };
+}
+
+const conn = createConnection('ws://example.com');
+
+// Usage
+// conn.connect().then(() => {
+//     console.log('Connected!');
+// });
+
+/*
+State machine with closures:
+- Private state management
+- Controlled state transitions
+- Retry logic
+- Clean public API
+*/
+```
+
+### **14.3 Private Variables Pattern**
+
+#### **Complete Privacy Example:**
+
+```javascript
+const SecureStore = (function() {
+    // Truly private - using WeakMap
+    const privateData = new WeakMap();
+    
+    // Private counter (shared across all instances)
+    let instanceCount = 0;
+    
+    function SecureStore(key) {
+        instanceCount++;
+        
+        // Store private data using WeakMap
+        privateData.set(this, {
+            key: key,
+            data: new Map(),
+            instanceId: instanceCount
+        });
+    }
+    
+    // Private helper methods
+    function getPrivateData(instance) {
+        return privateData.get(instance);
+    }
+    
+    function validateKey(key) {
+        if (typeof key !== 'string' || key.length === 0) {
+            throw new Error('Invalid key');
+        }
+    }
+    
+    // Public methods
+    SecureStore.prototype.set = function(key, value) {
+        validateKey(key);
+        const data = getPrivateData(this);
+        data.data.set(key, value);
+    };
+    
+    SecureStore.prototype.get = function(key) {
+        validateKey(key);
+        const data = getPrivateData(this);
+        return data.data.get(key);
+    };
+    
+    SecureStore.prototype.has = function(key) {
+        const data = getPrivateData(this);
+        return data.data.has(key);
+    };
+    
+    SecureStore.prototype.delete = function(key) {
+        const data = getPrivateData(this);
+        return data.data.delete(key);
+    };
+    
+    SecureStore.prototype.getInstanceId = function() {
+        const data = getPrivateData(this);
+        return data.instanceId;
+    };
+    
+    SecureStore.prototype.toString = function() {
+        const data = getPrivateData(this);
+        return `SecureStore #${data.instanceId} (${data.data.size} items)`;
+    };
+    
+    // Static method
+    SecureStore.getInstanceCount = function() {
+        return instanceCount;
+    };
+    
+    return SecureStore;
+})();
+
+const store1 = new SecureStore('secret-key-1');
+const store2 = new SecureStore('secret-key-2');
+
+store1.set('username', 'john');
+store1.set('password', 'secret');
+
+console.log(store1.get('username'));  // "john"
+console.log(store1.getInstanceId());  // 1
+console.log(store2.getInstanceId());  // 2
+console.log(SecureStore.getInstanceCount());  // 2
+
+// Cannot access private data
+console.log(store1.key);    // undefined
+console.log(store1.data);   // undefined
+
+/*
+═══════════════════════════════════════════════════════════
+WEAKMAP FOR PRIVACY
+═══════════════════════════════════════════════════════════
+
+Why WeakMap?
+1. Keys are objects (instances)
+2. Private data not accessible
+3. Automatic garbage collection
+4. No memory leaks
+
+Structure:
+privateData (WeakMap)
+├─ store1 → { key: '...', data: Map, instanceId: 1 }
+├─ store2 → { key: '...', data: Map, instanceId: 2 }
+
+When store1 is no longer referenced:
+- WeakMap automatically removes entry
+- Private data is garbage collected
+*/
+```
+
+### **14.4 Currying**
+
+Currying transforms a function with multiple arguments into a sequence of functions with single arguments.
+
+#### **Basic Currying:**
+
+```javascript
+// Regular function
+function add(a, b, c) {
+    return a + b + c;
+}
+console.log(add(1, 2, 3));  // 6
+
+// Curried function
+function curriedAdd(a) {
+    return function(b) {
+        return function(c) {
+            return a + b + c;
+        };
+    };
+}
+console.log(curriedAdd(1)(2)(3));  // 6
+
+/*
+═══════════════════════════════════════════════════════════
+HOW CURRYING WORKS WITH CLOSURES
+═══════════════════════════════════════════════════════════
+
+curriedAdd(1)(2)(3)
+
+Step 1: curriedAdd(1)
+┌──────────────────────────┐
+│ Returns function(b)      │
+│ [[Scope]]: ────┐         │
+└────────────────┼─────────┘
+                 ↓
+        ┌────────────┐
+        │ a: 1       │
+        └────────────┘
+
+Step 2: (returned function)(2)
+┌──────────────────────────┐
+│ Returns function(c)      │
+│ [[Scope]]: ────┐         │
+└────────────────┼─────────┘
+                 ↓
+        ┌────────────┐
+        │ b: 2       │
+        │ outer: ──┐ │
+        └──────────┼─┘
+                   ↓
+              ┌────────┐
+              │ a: 1   │
+              └────────┘
+
+Step 3: (returned function)(3)
+Executes: a + b + c = 1 + 2 + 3 = 6
+
+Each function closes over its argument!
+*/
+
+// ES6 arrow function version
+const curriedAddArrow = a => b => c => a + b + c;
+console.log(curriedAddArrow(1)(2)(3));  // 6
+```
+
+#### **Generic Curry Function:**
+
+```javascript
+function curry(fn) {
+    return function curried(...args) {
+        if (args.length >= fn.length) {
+            // All arguments provided
+            return fn.apply(this, args);
+        } else {
+            // Partial application
+            return function(...moreArgs) {
+                return curried.apply(this, args.concat(moreArgs));
+            };
+        }
+    };
+}
+
+// Regular function
+function multiply(a, b, c) {
+    return a * b * c;
+}
+
+// Curry it
+const curriedMultiply = curry(multiply);
+
+// Various ways to call
+console.log(curriedMultiply(2)(3)(4));      // 24
+console.log(curriedMultiply(2, 3)(4));      // 24
+console.log(curriedMultiply(2)(3, 4));      // 24
+console.log(curriedMultiply(2, 3, 4));      // 24
+
+// Partial application
+const double = curriedMultiply(2);
+const triple = curriedMultiply(3);
+
+console.log(double(5)(1));   // 10 (2 * 5 * 1)
+console.log(triple(5)(1));   // 15 (3 * 5 * 1)
+
+/*
+Curry benefits:
+1. Partial application
+2. Function reuse
+3. Composition
+4. Flexible calling
+*/
+```
+
+#### **Practical Currying Examples:**
+
+```javascript
+// Example 1: Logger with currying
+const log = curry(function(level, timestamp, message) {
+    console.log(`[${level}] ${timestamp}: ${message}`);
+});
+
+const errorLog = log('ERROR');
+const errorLogNow = errorLog(Date.now());
+
+errorLogNow('File not found');
+errorLogNow('Connection failed');
+
+// Example 2: Data processing
+const map = curry(function(fn, array) {
+    return array.map(fn);
+});
+
+const double = x => x * 2;
+const mapDouble = map(double);
+
+console.log(mapDouble([1, 2, 3]));  // [2, 4, 6]
+console.log(mapDouble([4, 5, 6]));  // [8, 10, 12]
+
+// Example 3: Validation
+const validate = curry(function(regex, message, value) {
+    if (!regex.test(value)) {
+        throw new Error(message);
+    }
+    return value;
+});
+
+const validateEmail = validate(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
+const validateEmailWithMsg = validateEmail('Invalid email');
+
+try {
+    console.log(validateEmailWithMsg('test@example.com'));  // Valid
+    console.log(validateEmailWithMsg('invalid'));  // Throws
+} catch (e) {
+    console.error(e.message);
+}
+```
+
+### **14.5 Function Composition**
+
+Function composition combines multiple functions to create new functions.
+
+#### **Basic Composition:**
+
+```javascript
+// Individual functions
+const add10 = x => x + 10;
+const multiply2 = x => x * 2;
+const subtract5 = x => x - 5;
+
+// Manual composition
+const result = subtract5(multiply2(add10(5)));
+console.log(result);  // ((5 + 10) * 2) - 5 = 25
+
+// Compose function (right to left)
+function compose(...fns) {
+    return function(value) {
+        return fns.reduceRight((acc, fn) => fn(acc), value);
+    };
+}
+
+const calculate = compose(subtract5, multiply2, add10);
+console.log(calculate(5));  // 25
+
+// Pipe function (left to right)
+function pipe(...fns) {
+    return function(value) {
+        return fns.reduce((acc, fn) => fn(acc), value);
+    };
+}
+
+const calculate2 = pipe(add10, multiply2, subtract5);
+console.log(calculate2(5));  // 25
+
+/*
+═══════════════════════════════════════════════════════════
+COMPOSITION WITH CLOSURES
+═══════════════════════════════════════════════════════════
+
+compose(subtract5, multiply2, add10)
+Returns a function that closes over [subtract5, multiply2, add10]
+
+When calculate(5) is called:
+┌──────────────────────────────┐
+│ Returned function            │
+│ [[Scope]]: ────┐             │
+└────────────────┼─────────────┘
+                 ↓
+        ┌────────────────────┐
+        │ fns: [            │
+        │   subtract5,       │
+        │   multiply2,       │
+        │   add10            │
+        │ ]                  │
+        └────────────────────┘
+
+Execution:
+1. add10(5) = 15
+2. multiply2(15) = 30
+3. subtract5(30) = 25
+*/
+```
+
+#### **Composition with Context:**
+
+```javascript
+function compose(...fns) {
+    return function(...args) {
+        // Call first function with all args
+        let result = fns[fns.length - 1].apply(this, args);
+        
+        // Call remaining functions with result
+        for (let i = fns.length - 2; i >= 0; i--) {
+            result = fns[i].call(this, result);
+        }
+        
+        return result;
+    };
+}
+
+const obj = {
+    multiplier: 2,
+    
+    add10: function(x) {
+        return x + 10;
+    },
+    
+    multiplyByProperty: function(x) {
+        return x * this.multiplier;
+    },
+    
+    subtract5: function(x) {
+        return x - 5;
+    }
+};
+
+const calculate = compose(
+    obj.subtract5,
+    obj.multiplyByProperty,
+    obj.add10
+);
+
+// Call with context
+console.log(calculate.call(obj, 5));  // ((5 + 10) * 2) - 5 = 25
+```
+
+#### **Practical Composition Examples:**
+
+```javascript
+// Example 1: Data transformation pipeline
+const trim = str => str.trim();
+const toLowerCase = str => str.toLowerCase();
+const removeSpaces = str => str.replace(/\s+/g, '');
+const addPrefix = str => `user_${str}`;
+
+const createUsername = pipe(
+    trim,
+    toLowerCase,
+    removeSpaces,
+    addPrefix
+);
+
+console.log(createUsername('  John Doe  '));  // "user_johndoe"
+
+// Example 2: Number validation and transformation
+const toNumber = x => Number(x);
+const roundToTwo = x => Math.round(x * 100) / 100;
+const clamp = (min, max) => x => Math.max(min, Math.min(max, x));
+const formatCurrency = x => `$${x.toFixed(2)}`;
+
+const processPrice = pipe(
+    toNumber,
+    roundToTwo,
+    clamp(0, 1000),
+    formatCurrency
+);
+
+console.log(processPrice('45.6789'));   // "$45.68"
+console.log(processPrice('1500'));      // "$1000.00"
+console.log(processPrice('-10'));       // "$0.00"
+
+// Example 3: Async composition
+function composeAsync(...fns) {
+    return function(value) {
+        return fns.reduceRight((acc, fn) => {
+            return acc.then(fn);
+        }, Promise.resolve(value));
+    };
+}
+
+const fetchUser = id => {
+    return Promise.resolve({ id, name: 'John' });
+};
+
+const fetchPosts = user => {
+    return Promise.resolve({
+        ...user,
+        posts: ['Post 1', 'Post 2']
+    });
+};
+
+const formatData = data => {
+    return {
+        userName: data.name,
+        postCount: data.posts.length
+    };
+};
+
+const getUserInfo = composeAsync(formatData, fetchPosts, fetchUser);
+
+// getUserInfo(1).then(info => {
+//     console.log(info);  // { userName: 'John', postCount: 2 }
+// });
+```
+
+### **14.6 Memoization**
+
+Memoization caches function results to improve performance.
+
+#### **Simple Memoization:**
+
+```javascript
+function memoize(fn) {
+    const cache = new Map();
+    
+    return function(...args) {
+        const key = JSON.stringify(args);
+        
+        if (cache.has(key)) {
+            console.log('Cache hit:', key);
+            return cache.get(key);
+        }
+        
+        console.log('Computing:', key);
+        const result = fn.apply(this, args);
+        cache.set(key, result);
+        return result;
+    };
+}
+
+// Expensive fibonacci
+function fibonacci(n) {
+    if (n <= 1) return n;
+    return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+const memoizedFib = memoize(fibonacci);
+
+console.time('First call');
+console.log(memoizedFib(35));  // Computing... ~2 seconds
+console.timeEnd('First call');
+
+console.time('Second call');
+console.log(memoizedFib(35));  // Cache hit! Instant
+console.timeEnd('Second call');
+
+/*
+Cache structure (closure):
+┌──────────────────────────────┐
+│ memoizedFib                  │
+│ [[Scope]]: ────┐             │
+└────────────────┼─────────────┘
+                 ↓
+        ┌────────────────────┐
+        │ cache: Map {       │
+        │   "[35]": 9227465  │
+        │   "[34]": 5702887  │
+        │   "[33]": 3524578  │
+        │   ...              │
+        │ }                  │
+        │ fn: fibonacci      │
+        └────────────────────┘
+
+Closure preserves cache across calls!
+*/
+```
+
+#### **Advanced Memoization with TTL:**
+
+```javascript
+function memoizeWithTTL(fn, ttl = 60000) {
+    const cache = new Map();
+    
+    return function(...args) {
+        const key = JSON.stringify(args);
+        const now = Date.now();
+        
+        if (cache.has(key)) {
+            const { value, timestamp } = cache.get(key);
+            
+            if (now - timestamp < ttl) {
+                console.log('Cache hit (valid)');
+                return value;
+            }
+            
+            console.log('Cache expired');
+            cache.delete(key);
+        }
+        
+        console.log('Computing...');
+        const value = fn.apply(this, args);
+        cache.set(key, {
+            value: value,
+            timestamp: now
+        });
+        
+        return value;
+    };
+}
+
+function fetchData(id) {
+    console.log(`Fetching data for id: ${id}`);
+    return { id, data: 'Important data' };
+}
+
+const memoizedFetch = memoizeWithTTL(fetchData, 2000);  // 2 second TTL
+
+memoizedFetch(1);  // Computing...
+memoizedFetch(1);  // Cache hit (valid)
+
+setTimeout(() => {
+    memoizedFetch(1);  // Cache expired, computing...
+}, 2500);
+```
+
+#### **LRU (Least Recently Used) Memoization:**
+
+```javascript
+function memoizeLRU(fn, maxSize = 100) {
+    const cache = new Map();
+    const accessOrder = [];
+    
+    return function(...args) {
+        const key = JSON.stringify(args);
+        
+        if (cache.has(key)) {
+            // Update access order (move to end)
+            const index = accessOrder.indexOf(key);
+            accessOrder.splice(index, 1);
+            accessOrder.push(key);
+            
+            console.log('Cache hit');
+            return cache.get(key);
+        }
+        
+        console.log('Computing...');
+        const result = fn.apply(this, args);
+        
+        // Check if cache is full
+        if (cache.size >= maxSize) {
+            // Remove least recently used (first in order)
+            const lruKey = accessOrder.shift();
+            cache.delete(lruKey);
+            console.log('Evicted LRU item');
+        }
+        
+        cache.set(key, result);
+        accessOrder.push(key);
+        
+        return result;
+    };
+}
+
+function expensiveOperation(n) {
+    return n * 2;
+}
+
+const memoized = memoizeLRU(expensiveOperation, 3);
+
+memoized(1);  // Computing...
+memoized(2);  // Computing...
+memoized(3);  // Computing...
+memoized(1);  // Cache hit
+memoized(4);  // Computing... (evicts 2, the LRU)
+memoized(2);  // Computing... (was evicted)
+
+/*
+LRU tracking:
+┌──────────────────────────────┐
+│ memoized                     │
+│ [[Scope]]: ────┐             │
+└────────────────┼─────────────┘
+                 ↓
+        ┌──────────────────────┐
+        │ cache: Map {         │
+        │   "[1]": 2           │
+        │   "[3]": 6           │
+        │   "[4]": 8           │
+        │ }                    │
+        │ accessOrder: [       │
+        │   "[3]",             │
+        │   "[1]",             │
+        │   "[4]"              │
+        │ ]                    │
+        │ maxSize: 3           │
+        └──────────────────────┘
+
+Most recently used at end
+*/
+```
+
+### **14.7 Closure Performance Considerations**
+
+#### **Memory Usage:**
+
+```javascript
+// PROBLEM: Unnecessary closure over large data
+function createProcessor() {
+    const hugeArray = new Array(1000000).fill('data');
+    let counter = 0;
+    
+    return {
+        // This function doesn't need hugeArray
+        // But it keeps it in memory!
+        incrementCounter: function() {
+            counter++;
+            return counter;
+        },
+        
+        // This function needs hugeArray
+        processArray: function() {
+            return hugeArray.length;
+        }
+    };
+}
+
+const processor = createProcessor();
+processor.incrementCounter();  // Keeps hugeArray in memory unnecessarily
+
+/*
+Memory issue:
+┌──────────────────────────────┐
+│ processor methods            │
+│ [[Scope]]: ────┐             │
+└────────────────┼─────────────┘
+                 ↓
+        ┌────────────────────────┐
+        │ Lexical Env            │
+        │ hugeArray: [...]       │ ← 1MB!
+        │ counter: 1             │
+        └────────────────────────┘
+
+Both methods keep hugeArray alive!
+*/
+
+// SOLUTION: Separate closures
+function createEfficientProcessor() {
+    let counter = 0;
+    
+    // Process heavy data once, keep only result
+    const processedResult = (function() {
+        const hugeArray = new Array(1000000).fill('data');
+        return hugeArray.length;  // Only keep the number
+        // hugeArray is garbage collected!
+    })();
+    
+    return {
+        incrementCounter: function() {
+            counter++;
+            return counter;
+        },
+        
+        getProcessedResult: function() {
+            return processedResult;
+        }
+    };
+}
+
+const efficientProcessor = createEfficientProcessor();
+efficientProcessor.incrementCounter();  // No hugeArray in memory!
+
+/*
+Better memory:
+┌──────────────────────────────┐
+│ processor methods            │
+│ [[Scope]]: ────┐             │
+└────────────────┼─────────────┘
+                 ↓
+        ┌────────────────────────┐
+        │ Lexical Env            │
+        │ counter: 1             │
+        │ processedResult: 1000000│ ← Just a number!
+        └────────────────────────┘
+
+Saved ~1MB per instance!
+*/
+```
+
+#### **Best Practices:**
+
+```javascript
+/*
+═══════════════════════════════════════════════════════════
+CLOSURE BEST PRACTICES
+═══════════════════════════════════════════════════════════
+
+DO:
+✓ Use closures for data privacy
+✓ Cache expensive computations
+✓ Create specialized functions
+✓ Maintain state in functional programming
+✓ Return only what's needed from outer scope
+
+DON'T:
+✗ Create closures in tight loops unnecessarily
+✗ Keep large objects in closure scope unnecessarily
+✗ Over-complicate with deep nesting
+✗ Forget to clean up event listeners
+✗ Hold references to DOM nodes after removal
+*/
+
+// GOOD: Closure for counter
+function createCounter() {
+    let count = 0;
+    return () => ++count;
+}
+
+// BAD: Closure in loop
+const functions = [];
+for (var i = 0; i < 1000; i++) {
+    functions.push(function() { return i; });  // All reference same i
+}
+
+// GOOD: Use let or avoid closure
+const functions2 = [];
+for (let i = 0; i < 1000; i++) {
+    functions2.push(function() { return i; });  // Each has own i
+}
+
+// Or better: Don't create functions if not needed
+const values = Array.from({ length: 1000 }, (_, i) => i);
+
+// GOOD: Minimal scope
+function createLogger(prefix) {
+    return function(message) {
+        console.log(`${prefix}: ${message}`);
+    };  // Only closes over 'prefix', not unnecessary variables
+}
+
+// BAD: Large scope
+function createBadLogger(prefix) {
+    const hugeConfig = loadHugeConfig();  // Kept in memory!
+    const anotherUnused = 'unused';       // Also kept!
+    
+    return function(message) {
+        console.log(`${prefix}: ${message}`);  // Only uses prefix
+    };  // But keeps entire scope in memory
+}
+
+// GOOD: Clean up references
+function attachHandler() {
+    const element = document.getElementById('btn');
+    
+    function handleClick() {
+        console.log('Clicked');
+    }
+    
+    element.addEventListener('click', handleClick);
+    
+    // Return cleanup function
+    return function cleanup() {
+        element.removeEventListener('click', handleClick);
+    };
+}
+
+const cleanup = attachHandler();
+// Later:
+cleanup();  // Remove listener, allow GC
+```
+
+---
+
+# **PART 7: ADVANCED TOPICS**
+
+## **15. EXECUTION CONTEXT IN ES6+**
+
+### **15.1 Block Scoping with let and const**
+
+ES6 introduced block-scoped variables with `let` and `const`.
+
+#### **Block Scope Detailed:**
+
+```javascript
+{
+    var functionScoped = 'accessible outside';
+    let blockScoped = 'not accessible outside';
+    const alsoBlockScoped = 'not accessible outside';
+}
+
+console.log(functionScoped);    // ✓ 'accessible outside'
+// console.log(blockScoped);    // ✗ ReferenceError
+// console.log(alsoBlockScoped);// ✗ ReferenceError
+
+/*
+═══════════════════════════════════════════════════════════
+EXECUTION CONTEXT WITH BLOCK SCOPE
+═══════════════════════════════════════════════════════════
+
+Global Execution Context:
+{
+    VariableEnvironment: {
+        functionScoped: 'accessible outside'  ← var hoisted here
+    },
+    
+    LexicalEnvironment: {
+        // Global let/const would go here
+    }
+}
+
+Block Environment (temporary, destroyed after block):
+{
+    LexicalEnvironment: {
+        blockScoped: 'not accessible outside',
+        alsoBlockScoped: 'not accessible outside'
+    },
+    outer: → Global Lexical Environment
+}
+
+After block ends:
+- Block environment destroyed
+- blockScoped and alsoBlockScoped garbage collected
+- functionScoped remains in global scope
+*/
+```
+
+#### **Block Scope in Different Statements:**
+
+```javascript
+// for loop
+for (let i = 0; i < 3; i++) {
+    setTimeout(() => console.log('let:', i), 100);
+}
+// Output: 0, 1, 2
+
+for (var j = 0; j < 3; j++) {
+    setTimeout(() => console.log('var:', j), 100);
+}
+// Output: 3, 3, 3
+
+// if statement
+if (true) {
+    let x = 'block';
+    var y = 'function';
+}
+// console.log(x);  // ReferenceError
+console.log(y);     // 'function'
+
+// switch statement
+switch (true) {
+    case true: {  // Block needed for let/const
+        let caseVar = 'case value';
+        break;
+    }
+}
+// console.log(caseVar);  // ReferenceError
+
+// try-catch
+try {
+    throw new Error('test');
+} catch (e) {
+    let errorMsg = e.message;
+    // errorMsg is block-scoped to catch
+}
+// console.log(errorMsg);  // ReferenceError
+
+/*
+Each block creates new Lexical Environment:
+
+for loop (let):
+┌──────────────────────────┐
+│ Iteration 0              │
+│ LexEnv: { i: 0 }         │
+└──────────────────────────┘
+┌──────────────────────────┐
+│ Iteration 1              │
+│ LexEnv: { i: 1 }         │
+└──────────────────────────┘
+┌──────────────────────────┐
+│ Iteration 2              │
+│ LexEnv: { i: 2 }         │
+└──────────────────────────┘
+
+for loop (var):
+┌──────────────────────────┐
+│ Function/Global Scope    │
+│ VarEnv: { j: 3 }         │ ← Same j
+└──────────────────────────┘
+*/
+```
+
+### **15.2 Arrow Functions and Lexical This**
+
+Arrow functions don't have their own `this` binding—they inherit it lexically.
+
+#### **Arrow Function 'this' Behavior:**
+
+```javascript
+const obj = {
+    name: 'Object',
+    
+    regularMethod: function() {
+        console.log('Regular this:', this.name);
+        
+        // Regular function - new 'this'
+        setTimeout(function() {
+            console.log('Timeout regular:', this.name);  // undefined
+        }, 100);
+        
+        // Arrow function - inherits 'this'
+        setTimeout(() => {
+            console.log('Timeout arrow:', this.name);  // 'Object'
+        }, 100);
+    },
+    
+    arrowMethod: () => {
+        console.log('Arrow method this:', this.name);  // undefined
+        // 'this' is from surrounding scope (global)
+    }
+};
+
+obj.regularMethod();
+// Regular this: Object
+// Timeout regular: undefined
+// Timeout arrow: Object
+
+obj.arrowMethod();
+// Arrow method this: undefined
+
+/*
+═══════════════════════════════════════════════════════════
+EXECUTION CONTEXT WITH ARROW FUNCTIONS
+═══════════════════════════════════════════════════════════
+
+regularMethod() Execution Context:
+{
+    ThisBinding: obj  ← Method call
+}
+
+Arrow function inside setTimeout:
+{
+    ThisBinding: <INHERITED from regularMethod> = obj
+    // No own 'this', uses parent's
+}
+
+Regular function inside setTimeout:
+{
+    ThisBinding: global/undefined  ← Function call
+    // Has own 'this'
+}
+
+arrowMethod Execution Context:
+{
+    ThisBinding: <INHERITED from global> = global/undefined
+    // Arrow as method gets global 'this'
+}
+*/
+```
+
+#### **Arrow Functions in Classes:**
+
+```javascript
+class Counter {
+    constructor() {
+        this.count = 0;
+        
+        // Arrow function property
+        this.incrementArrow = () => {
+            this.count++;
+            console.log('Arrow:', this.count);
+        };
+    }
+    
+    // Regular method
+    incrementRegular() {
+        this.count++;
+        console.log('Regular:', this.count);
+    }
+}
+
+const counter = new Counter();
+
+// Works as expected
+counter.incrementArrow();   // Arrow: 1
+counter.incrementRegular(); // Regular: 2
+
+// Detached references
+const arrowFn = counter.incrementArrow;
+const regularFn = counter.incrementRegular;
+
+arrowFn();    // Arrow: 3 (still works!)
+regularFn();  // TypeError: Cannot read 'count' of undefined
+
+/*
+Why arrow function works when detached?
+
+Arrow function created in constructor:
+{
+    [[Code]]: () => { this.count++; ... },
+    [[Scope]]: {
+        this: counter instance  ← Permanently bound!
+    }
+}
+
+Regular method:
+{
+    [[Code]]: function() { this.count++; ... },
+    this: determined at call time
+}
+
+Memory difference:
+- Arrow function: Each instance gets own function copy
+- Regular method: Shared on prototype
+
+const c1 = new Counter();
+const c2 = new Counter();
+
+c1.incrementArrow === c2.incrementArrow  // false (different functions)
+c1.incrementRegular === c2.incrementRegular  // true (same prototype method)
+*/
+```
+
+### **15.3 Classes and Execution Context**
+
+ES6 classes provide syntactic sugar over constructor functions.
+
+#### **Class Execution Context:**
+
+```javascript
+class Person {
+    constructor(name, age) {
+        this.name = name;
+        this.age = age;
+    }
+    
+    greet() {
+        console.log(`Hello, I'm ${this.name}`);
+    }
+    
+    static species = 'Homo sapiens';
+    
+    static describe() {
+        console.log(`Species: ${this.species}`);
+    }
+}
+
+const john = new Person('John', 30);
+john.greet();  // Hello, I'm John
+
+Person.describe();  // Species: Homo sapiens
+
+/*
+═══════════════════════════════════════════════════════════
+CLASS EXECUTION CONTEXT
+═══════════════════════════════════════════════════════════
+
+new Person('John', 30) process:
+
+Step 1: Create new empty object
+  {} created
+
+Step 2: Set prototype
+  {}.__proto__ = Person.prototype
+
+Step 3: Create constructor execution context
+  {
+      ThisBinding: {},  ← New object
+      LexicalEnvironment: {
+          name: 'John',
+          age: 30
+      }
+  }
+
+Step 4: Execute constructor
+  this.name = 'John'
+  this.age = 30
+  
+  Object now: {
+      name: 'John',
+      age: 30,
+      __proto__: Person.prototype
+  }
+
+Step 5: Return this (implicit)
+
+greet() method call:
+When john.greet() is called:
+{
+    ThisBinding: john,  ← Instance
+    LexicalEnvironment: {},
+    outer: → Global
+}
+
+static describe() call:
+When Person.describe() is called:
+{
+    ThisBinding: Person,  ← Class itself
+    LexicalEnvironment: {},
+    outer: → Global
+}
+*/
+```
+
+#### **Class Fields and Private Fields:**
+
+```javascript
+class BankAccount {
+    // Public field
+    accountType = 'checking';
+    
+    // Private field (ES2022)
+    #balance = 0;
+    #transactions = [];
+    
+    constructor(initialBalance) {
+        this.#balance = initialBalance;
+    }
+    
+    deposit(amount) {
+        if (amount > 0) {
+            this.#balance += amount;
+            this.#recordTransaction('deposit', amount);
+        }
+    }
+    
+    withdraw(amount) {
+        if (amount > 0 && amount <= this.#balance) {
+            this.#balance -= amount;
+            this.#recordTransaction('withdraw', amount);
+        }
+    }
+    
+    getBalance() {
+        return this.#balance;
+    }
+    
+    // Private method
+    #recordTransaction(type, amount) {
+        this.#transactions.push({
+            type,
+            amount,
+            timestamp: Date.now()
+        });
+    }
+    
+    getTransactions() {
+        return [...this.#transactions];
+    }
+}
+
+const account = new BankAccount(1000);
+account.deposit(500);
+console.log(account.getBalance());  // 1500
+
+// Cannot access private fields
+// console.log(account.#balance);  // SyntaxError
+// console.log(account.#recordTransaction);  // SyntaxError
+
+/*
+Execution Context with Private Fields:
+
+Instance structure:
+{
+    accountType: 'checking',  ← Public
+    #balance: 1500,           ← Private (truly inaccessible)
+    #transactions: [...]      ← Private
+}
+
+Private fields are internally managed:
+- Not accessible via this['#balance']
+- Not accessible via Object.keys()
+- Not inherited by subclasses
+- Syntax error if accessed outside class
+
+Traditional approach (naming convention):
+class OldAccount {
+    constructor() {
+        this._balance = 0;  // "private" by convention
+    }
+}
+// But this._balance is still accessible!
+
+New private fields:
+- Truly private
+- Syntax enforced
+- Better encapsulation
+*/
+```
+
+### **15.4 Modules and Module Scope**
+
+ES6 modules have their own execution context.
+
+#### **Module Execution Context:**
+
+```javascript
+// math.js
+console.log('math.js executing');
+console.log('Module this:', this);  // undefined
+
+let moduleCount = 0;
+export function increment() {
+    return ++moduleCount;
+}
+
+export const PI = 3.14159;
+
+// main.js
+console.log('main.js executing');
+import { increment, PI } from './math.js';
+
+console.log(increment());  // 1
+console.log(increment());  // 2
+console.log(PI);           // 3.14159
+
+/*
+═══════════════════════════════════════════════════════════
+MODULE EXECUTION CONTEXT
+═══════════════════════════════════════════════════════════
+
+When module loads:
+1. Module code executes ONCE (first import)
+2. Creates Module Environment Record
+3. Subsequent imports reuse same module instance
+
+math.js Module Execution Context:
+{
+    VariableEnvironment: {},  // Strict mode, no var hoisting to global
+    
+    LexicalEnvironment: {
+        EnvironmentRecord: {
+            moduleCount: 0,
+            increment: <function>,
+            PI: 3.14159
+        },
+        outer: null  // Modules have no outer scope
+    },
+    
+    ThisBinding: undefined  // Always undefined in modules
+}
+
+Export bindings:
+- Live bindings (not copies)
+- Read-only from importing module
+- Changes in exporting module reflect in importing module
+
+main.js Module Execution Context:
+{
+    LexicalEnvironment: {
+        EnvironmentRecord: {
+            increment: <reference to math.js export>,
+            PI: <reference to math.js export>
+        }
+    },
+    
+    ThisBinding: undefined
+}
+
+Import resolution:
+increment() → math.js Module → moduleCount
+Changes to moduleCount in math.js are visible to main.js
+*/
+```
+
+#### **Module Scope vs Script Scope:**
+
+```javascript
+// script.js (traditional <script>)
+var scriptVar = 'script';
+console.log(window.scriptVar);  // 'script'
+console.log(this);              // Window
+
+// module.js (type="module")
+var moduleVar = 'module';
+console.log(window.moduleVar);  // undefined
+console.log(this);              // undefined
+
+/*
+╔════════════════╦═══════════════╦══════════════════╗
+║    Feature     ║    Script     ║     Module       ║
+╠════════════════╬═══════════════╬══════════════════╣
+║ 'this'         ║ window/global ║ undefined        ║
+║ var scope      ║ Global        ║ Module           ║
+║ Strict mode    ║ Optional      ║ Always           ║
+║ Top-level await║ No            ║ Yes (ES2022)     ║
+║ Imports        ║ No            ║ Yes              ║
+║ Exports        ║ No            ║ Yes              ║
+╚════════════════╩═══════════════╩══════════════════╝
+*/
+```
+
+### **15.5 Async/Await and Execution Context**
+
+Async functions create special execution contexts.
+
+#### **Async Function Execution:**
+
+```javascript
+async function fetchUserData(userId) {
+    console.log('1. Start fetching');
+    
+    const response = await fetch(`/api/users/${userId}`);
+    console.log('2. Response received');
+    
+    const data = await response.json();
+    console.log('3. Data parsed');
+    
+    return data;
+}
+
+// fetchUserData(1);
+
+/*
+═══════════════════════════════════════════════════════════
+ASYNC FUNCTION EXECUTION CONTEXT
+═══════════════════════════════════════════════════════════
+
+Call: fetchUserData(1)
+
+Step 1: Create execution context
+{
+    LexicalEnvironment: {
+        userId: 1
+    },
+    ThisBinding: <depends on call>
+}
+
+Execute: console.log('1. Start fetching')
+Output: "1. Start fetching"
+
+Step 2: Hit 'await fetch(...)'
+- fetch() returns Promise
+- Function PAUSES (suspends execution context)
+- Returns Promise to caller immediately
+- Execution context saved
+
+Call Stack:
+[Global EC]  ← Returns here
+
+(Time passes... fetch completes)
+
+Step 3: Promise resolves
+- Execution context RESTORED
+- Continue from after await
+
+Call Stack:
+[fetchUserData EC]  ← Restored
+[Global EC]
+
+Execute: console.log('2. Response received')
+Output: "2. Response received"
+
+Step 4: Hit 'await response.json()'
+- Function PAUSES again
+- Saves context again
+
+(Time passes... json() completes)
+
+Step 5: Promise resolves
+- Context restored again
+- Continue execution
+
+Execute: console.log('3. Data parsed')
+Output: "3. Data parsed"
+
+Execute: return data
+- Returns resolved Promise
+- Context destroyed
+
+═══════════════════════════════════════════════════════════
+KEY POINTS
+═══════════════════════════════════════════════════════════
+
+1. async function returns Promise immediately
+2. Execution context can be suspended and restored
+3. 'await' pauses function, not entire program
+4. Other code can run while function is paused
+5. Variables persist across await (via saved context)
+*/
+```
+
+#### **Async Context Preservation:**
+
+```javascript
+async function demonstrateContext() {
+    const localVar = 'preserved';
+    let counter = 0;
+    
+    console.log('Before await:', localVar, counter);
+    
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Context preserved!
+    console.log('After await:', localVar, counter);
+    counter++;
+    
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Still preserved!
+    console.log('After second await:', localVar, counter);
+}
+
+// demonstrateContext();
+// Output:
+// Before await: preserved 0
+// (1 second pause)
+// After await: preserved 0
+// (1 second pause)
+// After second await: preserved 1
+
+/*
+How context is preserved:
+
+Initial execution context:
+{
+    LexicalEnvironment: {
+        localVar: 'preserved',
+        counter: 0
+    }
+}
+
+At first await:
+- Context saved in memory
+- Function suspended
+
+After 1 second:
+- Context restored from memory
+- localVar still 'preserved'
+- counter still 0
+- Continue execution
+
+At second await:
+- Context saved again (now counter: 1)
+- Function suspended
+
+After another second:
+- Context restored
+- All variables intact
+*/
+```
+
+### **15.6 Generators and Execution Context**
+
+Generator functions can pause and resume execution.
+
+#### **Generator Execution Context:**
+
+```javascript
+function* generatorFunction() {
+    console.log('Start');
+    const a = 1;
+    
+    yield a;
+    console.log('After first yield');
+    const b = 2;
+    
+    yield a + b;
+    console.log('After second yield');
+    
+    return a + b + 3;
+}
+
+const generator = generatorFunction();
+
+console.log('Created generator');
+console.log(generator.next());  // { value: 1, done: false }
+console.log('Between yields');
+console.log(generator.next());  // { value: 3, done: false }
+console.log('Before final');
+console.log(generator.next());  // { value: 6, done: true }
+
+/*
+═══════════════════════════════════════════════════════════
+GENERATOR EXECUTION FLOW
+═══════════════════════════════════════════════════════════
+
+generatorFunction() call:
+- Does NOT execute function body
+- Returns generator object
+- Execution context NOT created yet
+
+generator.next() - First call:
+┌─────────────────────────────────┐
+│ Generator Execution Context     │
+│ Created                         │
+│ LexicalEnvironment: { a: 1 }    │
+└─────────────────────────────────┘
+
+Output: "Start"
+Hits: yield a
+- Context SUSPENDED
+- Value 1 returned
+- Context saved
+
+generator.next() - Second call:
+┌─────────────────────────────────┐
+│ Generator Execution Context     │
+│ RESTORED                        │
+│ LexicalEnvironment: {           │
+│   a: 1,                         │
+│   b: 2                          │
+│ }                               │
+└─────────────────────────────────┘
+
+Output: "After first yield"
+Hits: yield a + b
+- Context SUSPENDED again
+- Value 3 returned
+- Context saved with b
+
+generator.next() - Third call:
+┌─────────────────────────────────┐
+│ Generator Execution Context     │
+│ RESTORED again                  │
+│ LexicalEnvironment: {           │
+│   a: 1,                         │
+│   b: 2                          │
+│ }                               │
+└─────────────────────────────────┘
+
+Output: "After second yield"
+Hits: return a + b + 3
+- Context completed
+- Value 6 returned
+- done: true
+- Context destroyed
+
+Variables persist across yields because
+context is suspended, not destroyed!
+*/
+```
+
+#### **Generator with Closure:**
+
+```javascript
+function* createCounter() {
+    let count = 0;
+    
+    while (true) {
+        const increment = yield count;
+        if (increment) {
+            count += increment;
+        } else {
+            count++;
+        }
+    }
+}
+
+const counter = createCounter();
+
+console.log(counter.next());      // { value: 0, done: false }
+console.log(counter.next());      // { value: 1, done: false }
+console.log(counter.next(5));     // { value: 6, done: false }
+console.log(counter.next());      // { value: 7, done: false }
+
+/*
+Generator maintains closure over 'count':
+
+┌──────────────────────────────────┐
+│ counter (generator object)       │
+│                                  │
+│ [[GeneratorState]]: suspended    │
+│ [[GeneratorContext]]: ────┐      │
+└───────────────────────────┼──────┘
+                            ↓
+                ┌─────────────────────┐
+                │ Suspended Context   │
+                │ count: 7            │
+                │ increment: undefined│
+                │ (from last yield)   │
+                └─────────────────────┘
+
+Each next() call:
+1. Restores context
+2. Continues from last yield
+3. Updates count
+4. Suspends at next yield
+5. Saves context
+
+Context persists between next() calls!
+*/
+```
+
+
 
