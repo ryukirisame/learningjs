@@ -483,7 +483,7 @@ console.log(window.foo); // function foo() {}
 | Default candidate           | The global object                                  |
 | Used by                     | global var, global function declarations, `with`   |
 | Allows property-like lookup | Yes                                                |
-| Allows deletion             | global var cannot be deleted, but with objects yes |
+| Allows deletion             | global var cannot be deleted, but 'with' objects yes |
 | No TDZ                      | Correct — OER has **no TDZ**                       |
 
 ## OER in the Global Execution Context
