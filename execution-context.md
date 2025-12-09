@@ -658,7 +658,7 @@ This is why inner functions can access global `var` like `z`.
 
 # Scope Chain
 ## Identifier Resolution Algorithm
-At any scope level (function or global)
+Lets suppose JS is trying to resolve an identifier. At any scope level (function or global):
 1. Step 1 - Check the current Lexical Environment's ER
     - if found, return
 2. Step 2 - Check the current Variable Environment's ER  (check the VE of the same execution context after checking that context’s LE)
@@ -666,6 +666,7 @@ At any scope level (function or global)
 3. Step 3: If not found, move upward via the Lexical Environment's outer pointer
 
 Now at the parent scope:
+
 4. Step 4: Check parent Lexical Environment's ER
     - if found, return
 5. Step 5: Check parent Variable Environment’s ER
@@ -673,6 +674,7 @@ Now at the parent scope:
 6. Step 6: if not found, continue going up via parent's `LE.outer` and repeat the process
 
 Eventually reach the Gloabl Lexical Environment (GER)
+
 7. Step 7: Check global Declarative ER (let/const)
     - if found, return
 8. Step 8: Check global Object ER (OER) (var/function → global object)
@@ -696,8 +698,10 @@ function outer() {
 }
 ```
 When outer() returns inner:
+
 - `inner` keeps a reference to outer’s LE
 - `inner` also keeps access to outer’s VE
+  
 So both a and b remain alive in memory because `inner` needs access to parent's `let`, `const`, `params` and `var` etc.
 
 
