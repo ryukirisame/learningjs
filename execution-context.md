@@ -439,6 +439,85 @@ Arrow Function LE:
 ```
 
 
+# Object Environment Record (OER)
+
+This is the environment record type that interacts with JavaScript objects, especially the global object. All bindings(entries) are stored directly as properties on an object.
+
+## Where is the OER used?
+1. Global scope (for var and global function declarations)
+2. With statements (with(someObject) { ... })
+
+
+## 1. Global OER
+This is the most important usage.
+
+When you write:
+```js
+var x = 10;
+function foo() {}
+```
+At the global level only, var x and foo are stored in the Object Environment Record, backed by the global object (window, global, globalThis).
+
+So the OER contains:
+```js
+Object ER:
+   x: 10
+   foo: function
+(These are actual properties of the global object)
+```
+
+This is exactly why:
+```js
+console.log(window.x);  // 10
+console.log(window.foo); // function foo() {}
+```
+
+#### Why does global var go here instead of DER?
+- Because historically JavaScript's global variables were just properties on the global object.
+- ECMAScript maintained this behavior for compatibility.
+
+## Properties of the OER
+| Feature                     | Value                                              |
+| --------------------------- | -------------------------------------------------- |
+| Backing store               | An actual JavaScript object                        |
+| Default candidate           | The global object                                  |
+| Used by                     | global var, global function declarations, `with`   |
+| Allows property-like lookup | Yes                                                |
+| Allows deletion             | global var cannot be deleted, but with objects yes |
+| No TDZ                      | Correct — OER has **no TDZ**                       |
+
+## OER in the Global Execution Context
+
+```js
+Global Lexical Environment (Global Env Record)
+|
+|-- Declarative ER (global let/const)
+|
+|-- Object ER (global var / function declarations)
+       (Backed by global object)
+```
+```js
+Global Variable Environment → References the same Object ER of Global Lexical Env.
+```
+Thus:
+- Global `var` lives in OER
+- OER is part of the Global Lexical Environment
+- So variable lookup finds `var` via Lexical Environment chain
+
+
+
+
+
+
+## IMPORTANT DIFFERENCES FROM DECLARATIVE ER
+
+| Feature                           | Declarative ER            | Object ER                    |
+| --------------------------------- | ------------------------- | ---------------------------- |
+| Stores variables in               | internal record           | actual JavaScript object     |
+| Has TDZ                           | YES                       | NO                           |
+| Used for                          | let/const/var-in-function | global var, with-object      |
+| Allows shadowing local variables? | Yes                       | Not in global OER            |
+| Find operation                    | identifier → binding      | identifier → property lookup |
 
 
 
