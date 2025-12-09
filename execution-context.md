@@ -612,7 +612,49 @@ So, the DER can behave differently depending on how it is created.
     - bindings that dont have TDZ 
 
 
+# Global Environment Record
+The Global Environment Record is not a normal Environment Record.
+It is a composite (a wrapper) around two different environment records: DER + OER.
 
+```js
+GlobalEnvironmentRecord (GER)
+|
+|-- Declarative Environment Record (DER)   → stores global let/const
+|
+|-- Object Environment Record (OER)        → stores global var/function
+       (backed by the global object)
+```
+This hybrid structure exists only at the global scope.
+
+When JavaScript starts, the engine creates the Global Execution Context, which contains:
+```js
+GlobalExecutionContext
+|
+|-- LexicalEnvironment → GlobalEnvironmentRecord (GER)
+|
+|-- VariableEnvironment → the SAME Object Environment Record inside GER
+```
+
+
+### WHY DOES GLOBAL SCOPE USE THIS HYBRID STRUCTURE?
+
+Because ECMAScript must support BOTH:
+1. Modern lexical declarations (`let`, `const`)
+    - which must not pollute the global object
+2. Legacy `var/function` global declarations
+    - which historically must become properties on the global object (for backward compatibility)
+
+### GER in Relation to Function Execution Contexts
+
+When a function is called:
+- Its Lexical Environment’s outer pointer points to the Global Lexical Environment
+- Which uses the GER as its EnvironmentRecord
+
+So closure resolution eventually reaches the GER and finds:
+- `let/const` in DER
+- global `var` in OER
+
+This is why inner functions can access global `var` like `z`.
 
 
 
