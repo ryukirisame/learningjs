@@ -589,7 +589,7 @@ var bar = 20;
 
 
 ### An important question
-#### If DER enforces TDZ, then what about the variable environment of a function? Its environment record uses DER too. But all the vars go inside variable environment, but they don't have TDZ.
+#### If DER enforces TDZ, then what about the variable environment of a function? Its environment record uses DER too. But all the `vars` go inside variable environment, but `vars` don't have TDZ.
 
 A Declarative Environment Record is a general-purpose structure. It can store different kinds of bindings:
 1. Lexical bindings (let/const)
