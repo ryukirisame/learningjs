@@ -705,5 +705,150 @@ When outer() returns inner:
 So both a and b remain alive in memory because `inner` needs access to parent's `let`, `const`, `params` and `var` etc.
 
 
+# Functions: Where Do They Actually Live?
+## The simple truth:
+- Function DECLARATIONS are stored in the VARIABLE ENVIRONMENT (along with var).
+- Function EXPRESSIONS assigned to let/const are stored in the LEXICAL ENVIRONMENT.
+This determines whether they're function-scoped or block-scoped!
+
+
+<img width="1062" height="987" alt="image" src="https://github.com/user-attachments/assets/ff2c1e79-7ed8-4f0c-9713-f8607fa027ba" />
+
+## Example 1: Function Declaration vs Function Expression
+```js
+// Test hoisting behavior
+console.log('=== Testing Hoisting ===');
+console.log('Can call funcDeclaration?', typeof funcDeclaration);
+console.log('Can call funcExprVar?', typeof funcExprVar);
+// console.log('Can call funcExprLet?', typeof funcExprLet); // ReferenceError
+
+// Actually call the function declaration (works!)
+console.log('\nCalling funcDeclaration:', funcDeclaration());
+
+// Try to call funcExprVar (error - it's undefined)
+// console.log('Calling funcExprVar:', funcExprVar()); // TypeError!
+
+// Function Declaration - stored in Variable Environment
+function funcDeclaration() {
+    return 'I am a function declaration';
+}
+
+// Function Expression with var - stored in Variable Environment
+var funcExprVar = function() {
+    return 'I am a function expression with var';
+};
+
+// Function Expression with let - stored in Lexical Environment
+let funcExprLet = function() {
+    return 'I am a function expression with let';
+};
+
+console.log('\n=== After All Declarations ===');
+console.log('funcDeclaration:', funcDeclaration());
+console.log('funcExprVar:', funcExprVar());
+console.log('funcExprLet:', funcExprLet());
+```
+<img width="1183" height="486" alt="image" src="https://github.com/user-attachments/assets/2186a14b-2069-4b9e-98bb-cbf9800160ce" />
+
+## Example 2: Block Scope Behavior
+```js
+function blockScopeTest() {
+    console.log('=== Outside Block ===');
+    
+    // Function declaration in block
+    if (true) {
+        console.log('\n=== Inside Block ===');
+        
+        // Function declaration - goes to Variable Environment
+        function blockFunc() {
+            return 'Block function declaration';
+        }
+        
+        // Function expression with let - goes to Lexical Environment
+        let blockFuncLet = function() {
+            return 'Block function expression with let';
+        };
+        
+        // Function expression with var - goes to Variable Environment
+        var blockFuncVar = function() {
+            return 'Block function expression with var';
+        };
+        
+        console.log('Inside: blockFunc:', blockFunc());
+        console.log('Inside: blockFuncLet:', blockFuncLet());
+        console.log('Inside: blockFuncVar:', blockFuncVar());
+    }
+    
+    console.log('\n=== After Block ===');
+    console.log('blockFunc accessible?', typeof blockFunc);
+    console.log('blockFuncLet accessible?', typeof blockFuncLet);
+    console.log('blockFuncVar accessible?', typeof blockFuncVar);
+    
+    // Try to call them if they exist
+    if (typeof blockFunc !== 'undefined') {
+        console.log('Calling blockFunc:', blockFunc());
+    }
+    if (typeof blockFuncVar !== 'undefined') {
+        console.log('Calling blockFuncVar:', blockFuncVar());
+    }
+}
+
+blockScopeTest();
+```
+<img width="1187" height="705" alt="image" src="https://github.com/user-attachments/assets/2688c504-db60-46cc-a05f-6fa774314a79" />
+
+## Example 3: Complete Breakdown
+```js
+function completeExample(param1, param2) {
+    console.log('=== What gets stored where? ===\n');
+    
+    // These go to Variable Environment:
+    var varVariable = 'I am var';
+    function declaredFunc() {
+        return 'I am a function declaration';
+    }
+    var funcInVar = function() {
+        return 'I am function in var';
+    };
+    
+    // These go to Lexical Environment:
+    let letVariable = 'I am let';
+    const constVariable = 'I am const';
+    let funcInLet = function() {
+        return 'I am function in let';
+    };
+    const arrowFunc = () => 'I am arrow function';
+    
+    console.log('Variable Environment stores:');
+    console.log('  - varVariable:', varVariable);
+    console.log('  - declaredFunc:', declaredFunc());
+    console.log('  - funcInVar:', funcInVar());
+    
+    console.log('\nLexical Environment stores:');
+    console.log('  - param1:', param1);
+    console.log('  - param2:', param2);
+    console.log('  - letVariable:', letVariable);
+    console.log('  - constVariable:', constVariable);
+    console.log('  - funcInLet:', funcInLet());
+    console.log('  - arrowFunc:', arrowFunc());
+    console.log('  - arguments:', arguments.length, 'arguments');
+}
+
+completeExample('First param', 'Second param');
+```
+
+<img width="1188" height="769" alt="image" src="https://github.com/user-attachments/assets/412a5b8a-29bc-4693-89b3-4072bfe777e0" />
+
+## The Key Insight:
+It's not about whether something IS a function, it's about HOW it was declared!
+
+- function foo() {} → Variable Environment (function-scoped)
+- let foo = function() {} → Lexical Environment (block-scoped)
+- const foo = () => {} → Lexical Environment (block-scoped)
+The keyword you use (function, var, let, const) determines which environment stores it!
+
+## Note
+In ES6+ strict mode and modern JavaScript, function declarations inside blocks are actually block-scoped (more like Lexical Environment behavior). However, in non-strict mode or older JavaScript, they behave like Variable Environment storage. The exact behavior can vary between JavaScript engines!
+
 
 
