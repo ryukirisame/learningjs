@@ -9,7 +9,7 @@ In JavaScript, call, apply, and bind are methods available on functions that all
 The call method allows you to invoke a function with a specified this value and arguments provided individually.
 
 ### Syntax
-```
+```js
 function.call(thisArg, arg1, arg2, ...)
 ```
 thisArg: The value to use as this when calling the function. <br>
@@ -18,7 +18,7 @@ arg1, arg2, ...: Arguments to pass to the function.
 
 ### Example
 
-```
+```js
 function greet(greeting, punctuation) {
   console.log(greeting + ', ' + this.name + punctuation);
 }
@@ -35,7 +35,7 @@ The arguments 'Hello' and '!' are passed individually.
 
 
 **Using call for Method Borrowing**
-```
+```js
 const obj1 = {
   name: 'Alice',
   greet: function() {
@@ -53,7 +53,7 @@ obj1.greet.call(obj2); // Output: Hello, Bob
 The apply method is similar to 'call' method, but it takes an array of arguments instead of listing them individually.
 
 ### Syntax
-```
+```js
 function.apply(thisArg, [argsArray])
 ```
 
@@ -62,7 +62,7 @@ argsArray: An array or array-like object containing arguments to pass to the fun
 
 
 ### Example
-```
+```js
 function greet(greeting, punctuation) {
   console.log(greeting + ', ' + this.name + punctuation);
 }
@@ -84,7 +84,7 @@ Use apply() when the number of arguments is not known beforehand or when the arg
 The bind method creates a new function with a fixed 'this' value and some arguments already set.
 
 ### Syntax
-```
+```js
 const boundFunction = function.bind(thisArg, arg1, arg2, ...)
 ```
 
@@ -92,7 +92,7 @@ thisArg: The value to use as this when calling the new function. <br>
 arg1, arg2, ...: Arguments to pre-fill for the new function.
 
 ### Example
-```
+```js
 function greet(greeting, punctuation) {
   console.log(greeting + ', ' + this.name + punctuation);
 }
@@ -110,7 +110,7 @@ The greeting argument is pre-filled with 'Hello', and the remaining arguments ca
 
 
 **Using bind for Partial Application**
-```
+```js
 function multiply(a, b) {
   return a * b;
 }
@@ -138,7 +138,7 @@ When we talk about "pre-fill," we mean providing some of the arguments to a func
 
 ### Example of Partial Application
 
-```
+```js
 function multiply(a, b, c) {
   return a * b * c;
 }
@@ -152,7 +152,7 @@ console.log(multiplyBySix(4)); // Output: 24
 ## Creating a Generic Partial Application Function
 You can create a generic function for partial application:
 
-```
+```js
 function partial(fn, ...preFilledArgs) {
   return function(...laterArgs) {
     return fn(...preFilledArgs, ...laterArgs);
@@ -179,7 +179,7 @@ NOTE: The number of arguments a function takes is also called arity.
 
 Example:
 
-```
+```js
 function sum(a, b, c) {
     return a + b + c;
 }
@@ -187,7 +187,7 @@ sum(1,2,3); // 6
 ```
 
 Let’s create a curried version of the function and see how we would call the same function (and get the same result) in a series of calls:
-```
+```js
 function sum(a) {
     return (b) => {
         return (c) => {
@@ -200,7 +200,7 @@ console.log(sum(1)(2)(3)) // 6
 
 ### Currying with Arrow Functions
 Using arrow functions, currying can be more concise:
-```
+```js
 const curriedAdd = a => b => a + b;
 
 console.log(curriedAdd(2)(3)); // Output: 5
@@ -209,7 +209,7 @@ console.log(curriedAdd(2)(3)); // Output: 5
 ### Currying Functions with More Arguments
 For functions with more arguments, currying involves nesting more functions:
 
-```
+```js
 const curriedMultiply = a => b => c => a * b * c;
 
 console.log(curriedMultiply(2)(3)(4)); // Output: 24
@@ -225,7 +225,7 @@ console.log(multiplyByTwoAndThree(4)); // Output: 24
 Some might start to think that the number of nested functions a curried function has depends on the number of arguments it receives. Yes, that makes it a curry.
 
 Let’s take same sum example:
-```
+```js
 function sum(a) {
     return (b, c) => {
         return a * b * c
@@ -234,7 +234,7 @@ function sum(a) {
 ```
 It can be called like this:
 
-```
+```js
 let x = sum(10);
 x(3,12);
 x(20,12);
@@ -250,7 +250,7 @@ Currying and partial application are related because of closure, but they are di
 
 Partial application transforms a function into another function with smaller arity.
 
-```
+```js
 function sum1(x, y, z) {
     return sum2(x,y,z)
 }
@@ -263,7 +263,7 @@ function sum1(x) {
 ```
 For currying, it would look like this:
 
-```
+```js
 function sum1(x) {
     return (y) = > {
         return (z) = > {
@@ -279,7 +279,7 @@ Currying creates nesting functions according to the number of the arguments of t
 
 we can utilize the concept of closures and recursive function calls.
 
-```
+```js
 function sum(a) {
     function innerSum(b) {
         if (b === undefined) {
