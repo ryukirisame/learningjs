@@ -316,8 +316,11 @@ obj.myMethod(); // Logs 42
 function myFunction() {
     console.log(this);
 }
-window.myFunction(); // Will print window object 
+window.myFunction(); // Will print window object
+myFunction(); // Also window in non-strict, but for different reason 
 ```
+- The first is a method call, the second is a plain function call that defaults to global.
+  
 4.	Constructor Context: When a function is used as a constructor (with the new keyword), this refers to the newly created object.
 ```js
 function MyConstructor() {
@@ -429,6 +432,19 @@ function Timer() {
     }, 1000);
 }
 const timer = new Timer(); // `this` in the arrow function refers to the Timer instance
+```
+
+7. Explicitly setting 'this' value using `.call()`, `.apply()`, `.bind()`
+
+```js
+function greet() {
+    console.log(this.name);
+}
+const person = { name: "Alice" };
+greet.call(person);  // "Alice" - explicitly sets 'this'
+greet.apply(person); // "Alice" - same as call
+const boundGreet = greet.bind(person);
+boundGreet();        // "Alice" - permanently binds 'this'
 ```
 
 # Hoisting
