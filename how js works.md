@@ -354,8 +354,26 @@ const obj = {
 };
 obj.myMethod();
 ```
+```js
+const obj = {
+    name: "Sid",
+    delayedGreet: function() {
+        setTimeout(function() {
+            console.log(this);  //  'this' is window/global
+        }, 100);
+        
+        setTimeout(() => {
+            console.log(this.name);  // "Sid" - arrow function preserves 'this'
+        }, 200);
+    }
+};
+obj.delayedGreet();
+```
+**Explanation**
+- The first setTimeout callback is invoked as a plain function call, not as a method, so this defaults to the global object (window) in non-strict mode.
+- The second setTimeout callback is an arrow function, which does not have its own `this`. Instead, it lexically captures `this` from the surrounding execution context, which in this case is the object method call, so this correctly refers to the object.
 
-Additional Use Case:
+**Additional Use Case:**
 ```js
 function Timer() {
     this.seconds = 0;
