@@ -332,6 +332,9 @@ document.querySelector('button').addEventListener('click', function() {
 6. Arrow Functions:
 Arrow functions are unique because they don't have their own 'this' binding. Instead, they inherit 'this' from the surrounding lexical context—the scope in which they were defined. This behavior makes arrow functions particularly useful in scenarios where you want to maintain the 'this' value from the outer scope, such as in callback functions or event handlers.
 
+- Basically, arrow functions get their 'this' value from the execution context of their surrounding code.
+- Also, keep in mind that Objects don't create execution contexts, functions and modules do.
+
 **Meaning of 'lexical'**
 
 - Lexical means “based on where the code is written in the source code.” <br>
@@ -351,7 +354,7 @@ const obj = {
 };
 obj.myMethod();
 ```
-
+- Since, arrow function doesn't have 'this' binding of its own, it tries to capture the 'this' value from its enclosing execution context, which in this case is not the object, but the global execution context.
 ```js
 const obj = {
     value: 42,
