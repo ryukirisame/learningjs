@@ -129,6 +129,40 @@ console.log(double(5)); // Output: 10
 - 'apply' takes arguments as an array.
 - 'bind' pre-fills arguments, allowing partial application.
 
+# call, apply, bind with arrow functions
+- call, apply, and bind do NOT change `this` for arrow functions. They are ignored for `this` binding.
+- Why this happens (core reason)
+  - call, apply, and bind work by setting `this` at call time
+  - Arrow functions do not use call-time `this`
+  - They capture `this` lexically (from where they are written)
+  - So there’s nothing for call/apply/bind to override.
+ 
+```js
+const greet = () => {
+  console.log(this.name);
+};
+
+const obj = { name: "Sid" };
+
+greet.call(obj);  // ❌ undefined (or window.name)
+greet.apply(obj); // ❌ undefined
+greet.bind(obj)(); // ❌ undefined
+
+```
+
+- `bind` DOES NOT bind `this`. BUT it CAN bind arguments
+  - ```js
+    const add = (a, b) => a + b;
+
+    const add5 = add.bind(null, 5);
+    console.log(add5(3)); // 8
+    ```
+| Feature        | Normal Function | Arrow Function |
+| -------------- | --------------- | -------------- |
+| Bind `this`    | ✅ Yes           | ❌ No           |
+| Bind arguments | ✅ Yes           | ✅ Yes          |
+
+
 
 # Partial Application and Pre-Fill in JavaScript
 Partial application is a technique in functional programming where a function is applied to some of its arguments, producing a new function that expects the remaining arguments. This concept can be implemented in JavaScript using the bind method.
