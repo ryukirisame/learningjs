@@ -282,14 +282,20 @@ In this alternative solution:
 
 # 'this' Binding
 
-- The value of this depends on how a function is called and not necessarily where it is defined.
+- The value of `this` depends on how a function is called and not necessarily where it is defined.
 - "this substitution" refers to the concept of how the 'this' keyword's value is determined or "substituted" in various contexts in JavaScript.
 - The value of 'this' is determined by the execution context in which a function is called. Here are the primary rules for determining this binding:
 1.	Global Context: When 'this' is referenced in the global execution context (outside of any function), it refers to the global object. (which is window in browsers and global in Node.js).
 ```js
 console.log(this); // In a browser, this logs the `window` object
 ```
-2.	Function Context: When a regular function is called, this refers to the global object in non-strict mode and undefined in strict mode.
+
+- For ES6 modules, the value of 'this'will be undefined.
+  - Why?
+  - ES6 modules are desinged to be encapsulated.
+  - It prevents developers from accidentally attaching variables to the global scope using this.myVar = 10.
+
+2.	Function Context: When a regular function is called, `this` refers to the global object in non-strict mode and undefined in strict mode.
 ```js
 function myFunction() {
     console.log(this);
@@ -322,8 +328,7 @@ console.log(instance.value); // Logs 42
 ```
 
 5. Arrow Functions:
-Arrow functions are unique because they don't have their own 'this' binding. Instead, they inherit 'this' from the surrounding lexical context—the scope in which they were defined. This behavior makes arrow functions particularly useful in scenarios where you want to maintain the 'this' value from the outer scope, such as in callback functions or event handlers.
-
+- Arrow functions are unique because they don't have their own 'this' binding. Instead, they inherit 'this' from the surrounding lexical context—the scope in which they were defined. 
 - Basically, arrow functions get their 'this' value from the execution context of their surrounding code.
 - Also, keep in mind that Objects don't create execution contexts, functions and modules do.
 
@@ -399,17 +404,6 @@ const nested = {
 nested.outer();
 ```
 
-**Additional Use Case:**
-```js
-function Timer() {
-    this.seconds = 0;
-    setInterval(() => {
-        this.seconds++;
-        console.log(this.seconds);
-    }, 1000);
-}
-const timer = new Timer(); // `this` in the arrow function refers to the Timer instance
-```
 
 6. Event Handlers:
 
@@ -421,6 +415,20 @@ document.querySelector('button').addEventListener('click', function() {
 document.getElementById('btn').addEventListener('click', () => {
     console.log(this);  // Window object (lexical)
 });
+```
+
+- Arrow functions are useful in callbacks where preserving the outer `this` is desired (e.g., timers, promises), but they are not suitable for DOM event handlers that rely on dynamic `this`.
+
+**Timer Use Case:**
+```js
+function Timer() {
+    this.seconds = 0;
+    setInterval(() => {
+        this.seconds++;
+        console.log(this.seconds);
+    }, 1000);
+}
+const timer = new Timer(); // `this` in the arrow function refers to the Timer instance
 ```
 
 # Hoisting
