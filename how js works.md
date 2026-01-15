@@ -321,15 +321,7 @@ const instance = new MyConstructor();
 console.log(instance.value); // Logs 42
 ```
 
-5. Event Handlers:
-In DOM event handlers, this usually refers to the element that received the event.
-```js
-document.querySelector('button').addEventListener('click', function() {
-  console.log(this); // Logs the button element
-});
-```
-
-6. Arrow Functions:
+5. Arrow Functions:
 Arrow functions are unique because they don't have their own 'this' binding. Instead, they inherit 'this' from the surrounding lexical context—the scope in which they were defined. This behavior makes arrow functions particularly useful in scenarios where you want to maintain the 'this' value from the outer scope, such as in callback functions or event handlers.
 
 - Basically, arrow functions get their 'this' value from the execution context of their surrounding code.
@@ -386,6 +378,27 @@ obj.delayedGreet();
 - The first setTimeout callback is invoked as a plain function call, not as a method, so this defaults to the global object (window) in non-strict mode.
 - The second setTimeout callback is an arrow function, which does not have its own `this`. Instead, it lexically captures `this` from the surrounding execution context, which in this case is the object method call, so this correctly refers to the object.
 
+```js
+const nested = {
+    name: "Nested",
+    outer: function() {
+        console.log(this.name);  // "Nested"
+        
+        function inner() {
+            console.log(this.name);  // undefined - new context
+        }
+        inner();
+        
+        const innerArrow = () => {
+            console.log(this.name);  // "Nested" - lexical
+        };
+        innerArrow();
+    }
+};
+
+nested.outer();
+```
+
 **Additional Use Case:**
 ```js
 function Timer() {
@@ -398,9 +411,17 @@ function Timer() {
 const timer = new Timer(); // `this` in the arrow function refers to the Timer instance
 ```
 
-<br>
+6. Event Handlers:
 
+```js
+document.querySelector('button').addEventListener('click', function() {
+  console.log(this); // Logs the button element
+});
 
+document.getElementById('btn').addEventListener('click', () => {
+    console.log(this);  // Window object (lexical)
+});
+```
 
 # Hoisting
 
